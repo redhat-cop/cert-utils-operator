@@ -7,14 +7,14 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/apis"
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller"
-
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	"github.com/raffaelespazzoli/secret-utils-operator/pkg/apis"
+	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -92,6 +92,11 @@ func main() {
 	}
 
 	log.Info("Registering Components.")
+
+	if err := routev1.SchemeBuilder.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
