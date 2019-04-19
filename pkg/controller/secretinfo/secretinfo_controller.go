@@ -125,8 +125,8 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	instance.StringData["tls.crt.info"] = generateCertInfo(instance.Data["tls.crt"])
-	instance.StringData["ca.crt.info"] = generateCertInfo(instance.Data["ca.crt"])
+	instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
+	instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
@@ -152,7 +152,7 @@ func generateCertInfo(pemCert []byte) string {
 			log.Error(err, "unable to describe this entry, skipping", "entry", cert)
 			continue
 		}
-		result += res + "/n"
+		result += res + "\n"
 	}
 	return result
 }

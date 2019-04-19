@@ -2,10 +2,12 @@ apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
   name: test1
+  annotations:
+    an_annotation: an_annotation_value
 spec:
   secretName: test1
   issuerRef:
-    name: inneca
+    name: innerca
     # We can reference ClusterIssuers by changing the kind here.
     # The default value is Issuer (i.e. a locally namespaced Issuer)
     kind: ClusterIssuer

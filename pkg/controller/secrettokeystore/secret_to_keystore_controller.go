@@ -3,10 +3,10 @@ package secrettokeystore
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	keystore "github.com/pavel-v-chernykh/keystore-go"
@@ -131,7 +131,15 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	keyStore, err := getKeyStoreFromSecret(instance)
+	if err != nil {
+		log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
+		return reconcile.Result{}, err
+	}
 	trustStore, err := getTrustStoreFromSecret(instance)
+	if err != nil {
+		log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
+		return reconcile.Result{}, err
+	}
 
 	buffer := bytes.Buffer{}
 	err = keystore.Encode(&buffer, *keyStore, []byte(password))
@@ -139,7 +147,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		log.Error(err, "unable to encode keystore", "keystore", keyStore)
 		return reconcile.Result{}, err
 	}
-	instance.Data["keystore.jks"] = []byte(base64.StdEncoding.EncodeToString(buffer.Bytes()))
+	instance.Data["keystore.jks"] = buffer.Bytes()
 
 	buffer = bytes.Buffer{}
 	err = keystore.Encode(&buffer, *trustStore, []byte(password))
@@ -147,7 +155,8 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		log.Error(err, "unable to encode truststore", "keystore", keyStore)
 		return reconcile.Result{}, err
 	}
-	instance.Data["truststore.jks"] = []byte(base64.StdEncoding.EncodeToString(buffer.Bytes()))
+	//instance.Data["truststore.jks"] = []byte(base64.StdEncoding.EncodeToString(buffer.Bytes()))
+	instance.Data["truststore.jks"] = buffer.Bytes()
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
@@ -168,24 +177,22 @@ func getKeyStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) {
 	if !ok {
 		return &keystore.KeyStore{}, errors.New("tls.crt not found")
 	}
-	//TODO decode crt and key
 	certs := []keystore.Certificate{}
 	for p, rest := pem.Decode(crt); p != nil; p, rest = pem.Decode(rest) {
 		certs = append(certs, keystore.Certificate{
-			Type:    p.Type,
+			Type:    "X.509",
 			Content: p.Bytes,
 		})
 	}
-
 	p, _ := pem.Decode(key)
 	if p == nil {
 		return &keystore.KeyStore{}, errors.New("no block found in key.tls, private key should have at least one pem block")
 	}
-	if p.Type != "PRIVATE KEY" {
+	if !strings.Contains(p.Type, "PRIVATE KEY") {
 		return &keystore.KeyStore{}, errors.New("private key block not of type PRIVATE KEY")
 	}
 
-	keyStore["alias"] = keystore.PrivateKeyEntry{
+	keyStore["alias"] = &keystore.PrivateKeyEntry{
 		Entry: keystore.Entry{
 			CreationDate: time.Now(),
 		},
@@ -201,15 +208,14 @@ func getTrustStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) 
 	if !ok {
 		return &keystore.KeyStore{}, errors.New("ca bundle key not found: ca.crt")
 	}
-	//TODO decode ca
 	i := 0
 	for p, rest := pem.Decode(ca); p != nil; p, rest = pem.Decode(rest) {
-		keyStore["alias"+strconv.Itoa(i)] = keystore.TrustedCertificateEntry{
+		keyStore["alias"+strconv.Itoa(i)] = &keystore.TrustedCertificateEntry{
 			Entry: keystore.Entry{
 				CreationDate: time.Now(),
 			},
 			Certificate: keystore.Certificate{
-				Type:    p.Type,
+				Type:    "X.509",
 				Content: p.Bytes,
 			},
 		}
