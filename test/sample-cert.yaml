@@ -1,0 +1,17 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: test1
+spec:
+  secretName: test1
+  issuerRef:
+    name: inneca
+    # We can reference ClusterIssuers by changing the kind here.
+    # The default value is Issuer (i.e. a locally namespaced Issuer)
+    kind: ClusterIssuer
+  commonName: example.com
+  organization:
+  - Example CA
+  dnsNames:
+  - example.com
+  - www.example.com

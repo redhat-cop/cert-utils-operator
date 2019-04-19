@@ -10,7 +10,7 @@ import (
 	"time"
 
 	keystore "github.com/pavel-v-chernykh/keystore-go"
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller/util"
+	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/util"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_secret")
+var log = logf.Log.WithName("controller_secret_to_keystore")
 
 const javaKeyStoresAnnotation = "raffa.systems/generate-java-keystores"
 const password = "changeme"
@@ -49,7 +49,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("secret-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("secret-to-keystore-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}

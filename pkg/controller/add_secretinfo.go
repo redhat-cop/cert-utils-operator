@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller/secretinfo"
+	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/secretinfo"
 )
 
 func init() {

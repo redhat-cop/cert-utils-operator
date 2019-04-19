@@ -13,8 +13,8 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/apis"
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller"
+	"github.com/raffaelespazzoli/cert-utils-operator/pkg/apis"
+	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -75,7 +75,7 @@ func main() {
 	ctx := context.TODO()
 
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "secret-utils-operator-lock")
+	err = leader.Become(ctx, "cert-utils-operator-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

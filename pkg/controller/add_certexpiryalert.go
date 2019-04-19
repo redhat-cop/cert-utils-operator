@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/raffaelespazzoli/secret-utils-operator/pkg/controller/certexpiryalert"
+	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/certexpiryalert"
 )
 
 func init() {

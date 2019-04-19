@@ -1,0 +1,29 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Issuer
+metadata:
+  name: selfsigning-issuer
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+---  
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: rootca
+  namespace: cert-manager
+spec:
+  secretName: rootca
+  commonName: "rootca"
+  isCA: true
+  issuerRef:
+    name: selfsigning-issuer
+    kind: Issuer
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: innerca
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: rootca

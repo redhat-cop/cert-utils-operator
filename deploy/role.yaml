@@ -1,7 +1,7 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: secret-utils-operator
+  name: cert-utils-operator
 rules:
 - apiGroups:
   - ""
@@ -42,6 +42,6 @@ rules:
   resources:
   - deployments/finalizers
   resourceNames:
-  - secret-utils-operator
+  - cert-utils-operator
   verbs:
   - "update"

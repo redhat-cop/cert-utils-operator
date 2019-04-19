@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: secret-utils-operator
+  name: cert-utils-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: secret-utils-operator
+      name: cert-utils-operator
   template:
     metadata:
       labels:
-        name: secret-utils-operator
+        name: cert-utils-operator
     spec:
-      serviceAccountName: secret-utils-operator
+      serviceAccountName: cert-utils-operator
       containers:
-        - name: secret-utils-operator
+        - name: cert-utils-operator
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
-          - secret-utils-operator
+          - cert-utils-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -28,4 +28,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "secret-utils-operator"
+              value: "cert-utils-operator"
