@@ -57,14 +57,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	isAnnotatedRoute := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, _ := e.MetaOld.GetAnnotations()[CertAnnotation]
-			newSecret, nok := e.MetaNew.GetAnnotations()[CertAnnotation]
-			if !nok {
-				return false
-			}
-			if newSecret == oldSecret {
-				return false
-			}
-			return true
+			newSecret, _ := e.MetaNew.GetAnnotations()[CertAnnotation]
+			return oldSecret != newSecret
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			_, ok := e.Meta.GetAnnotations()[CertAnnotation]
@@ -95,11 +89,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			}
 			return reflect.DeepEqual(oldSecret.Data, newSecret.Data)
 		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			if secret.Type != util.TLSSecret {
+				return false
+			}
+			return true
+		},
 	}
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner Route
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecedRoutes{
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecingRoutes{
 		Client: mgr.GetClient(),
 	}, isContentChanged)
 	if err != nil {
@@ -145,20 +149,22 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 	secretName, ok := instance.GetAnnotations()[CertAnnotation]
 	if !ok {
-		//we should never get here given the filters
-		return reconcile.Result{}, nil
+		instance.Spec.TLS.Key = ""
+		instance.Spec.TLS.Certificate = ""
+		instance.Spec.TLS.CACertificate = ""
+		instance.Spec.TLS.DestinationCACertificate = ""
+	} else {
+		secret := &corev1.Secret{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: instance.GetNamespace(),
+			Name:      secretName,
+		}, secret)
+		if err != nil {
+			log.Error(err, "unable to find referenced secret", "secret", secretName)
+			return reconcile.Result{}, err
+		}
+		populateRouteWithCertifcates(instance, secret)
 	}
-	secret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{
-		Namespace: instance.GetNamespace(),
-		Name:      secretName,
-	}, secret)
-	if err != nil {
-		log.Error(err, "unable to find referenced secret", "secret", secretName)
-		return reconcile.Result{}, err
-	}
-	populateRouteWithCertifcates(instance, secret)
-
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, "unable to update route", "route", instance)
@@ -189,12 +195,12 @@ func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route,
 	return result, nil
 }
 
-type enqueueRequestForReferecedRoutes struct {
+type enqueueRequestForReferecingRoutes struct {
 	client.Client
 }
 
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecedRoutes) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	routes, _ := matchSecret(e.Client, types.NamespacedName{
 		Name:      evt.Meta.GetName(),
 		Namespace: evt.Meta.GetNamespace(),
@@ -209,7 +215,7 @@ func (e *enqueueRequestForReferecedRoutes) Create(evt event.CreateEvent, q workq
 
 // Update implements EventHandler
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecedRoutes) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	routes, _ := matchSecret(e.Client, types.NamespacedName{
 		Name:      evt.MetaNew.GetName(),
 		Namespace: evt.MetaNew.GetNamespace(),
@@ -223,12 +229,12 @@ func (e *enqueueRequestForReferecedRoutes) Update(evt event.UpdateEvent, q workq
 }
 
 // Delete implements EventHandler
-func (e *enqueueRequestForReferecedRoutes) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 
 // Generic implements EventHandler
-func (e *enqueueRequestForReferecedRoutes) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 

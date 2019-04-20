@@ -73,14 +73,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return false
 			}
 			oldValue, _ := e.MetaOld.GetAnnotations()[certExpiryAlertAnnotation]
-			newValue, nok := e.MetaNew.GetAnnotations()[certExpiryAlertAnnotation]
-			if !nok {
-				return false
-			}
-			if oldValue == newValue {
-				return false
-			}
-			return newValue == "true"
+			newValue, _ := e.MetaNew.GetAnnotations()[certExpiryAlertAnnotation]
+			old := oldValue == "true"
+			new := newValue == "true"
+			return old != new
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
@@ -139,7 +135,10 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
+	value, _ := instance.GetAnnotations()[certExpiryAlertAnnotation]
+	if value != "true" {
+		return reconcile.Result{}, nil
+	}
 	expiry := getExpiry(instance)
 	expiryThreshold := getExpiryThreshold(instance)
 	if time.Now().Add(expiryThreshold).After(expiry) {

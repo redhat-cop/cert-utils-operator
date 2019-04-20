@@ -59,14 +59,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return false
 			}
 			oldValue, _ := e.MetaOld.GetAnnotations()[certInfoAnnotation]
-			newValue, nok := e.MetaNew.GetAnnotations()[certInfoAnnotation]
-			if !nok {
-				return false
-			}
-			if oldValue == newValue {
-				return false
-			}
-			return newValue == "true"
+			newValue, _ := e.MetaNew.GetAnnotations()[certInfoAnnotation]
+			old := oldValue == "true"
+			new := newValue == "true"
+			return old != new
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
@@ -124,9 +120,14 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
-	instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
-	instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
+	value, _ := instance.GetAnnotations()[certInfoAnnotation]
+	if value == "true" {
+		instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
+		instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
+	} else {
+		delete(instance.Data, "tls.crt.info")
+		delete(instance.Data, "ca.crt.info")
+	}
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {

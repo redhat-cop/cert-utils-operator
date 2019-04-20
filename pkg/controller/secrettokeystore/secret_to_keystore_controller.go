@@ -64,14 +64,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return false
 			}
 			oldValue, _ := e.MetaOld.GetAnnotations()[javaKeyStoresAnnotation]
-			newValue, nok := e.MetaNew.GetAnnotations()[javaKeyStoresAnnotation]
-			if !nok {
-				return false
-			}
-			if oldValue == newValue {
-				return false
-			}
-			return newValue == "true"
+			newValue, _ := e.MetaNew.GetAnnotations()[javaKeyStoresAnnotation]
+			old := oldValue == "true"
+			new := newValue == "true"
+			return old != new
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
@@ -129,34 +125,24 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
-	keyStore, err := getKeyStoreFromSecret(instance)
-	if err != nil {
-		log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
-		return reconcile.Result{}, err
+	value, _ := instance.GetAnnotations()[javaKeyStoresAnnotation]
+	if value == "true" {
+		keyStore, err := getKeyStoreFromSecret(instance)
+		if err != nil {
+			log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
+			return reconcile.Result{}, err
+		}
+		trustStore, err := getTrustStoreFromSecret(instance)
+		if err != nil {
+			log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
+			return reconcile.Result{}, err
+		}
+		instance.Data["keystore.jks"] = keyStore
+		instance.Data["truststore.jks"] = trustStore
+	} else {
+		delete(instance.Data, "keystore.jks")
+		delete(instance.Data, "truststore.jks")
 	}
-	trustStore, err := getTrustStoreFromSecret(instance)
-	if err != nil {
-		log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
-		return reconcile.Result{}, err
-	}
-
-	buffer := bytes.Buffer{}
-	err = keystore.Encode(&buffer, *keyStore, []byte(password))
-	if err != nil {
-		log.Error(err, "unable to encode keystore", "keystore", keyStore)
-		return reconcile.Result{}, err
-	}
-	instance.Data["keystore.jks"] = buffer.Bytes()
-
-	buffer = bytes.Buffer{}
-	err = keystore.Encode(&buffer, *trustStore, []byte(password))
-	if err != nil {
-		log.Error(err, "unable to encode truststore", "keystore", keyStore)
-		return reconcile.Result{}, err
-	}
-	//instance.Data["truststore.jks"] = []byte(base64.StdEncoding.EncodeToString(buffer.Bytes()))
-	instance.Data["truststore.jks"] = buffer.Bytes()
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
@@ -167,15 +153,15 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	return reconcile.Result{}, nil
 }
 
-func getKeyStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) {
+func getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
 	key, ok := secret.Data["tls.key"]
 	if !ok {
-		return &keystore.KeyStore{}, errors.New("tls.key not found")
+		return []byte{}, errors.New("tls.key not found")
 	}
 	crt, ok := secret.Data["tls.crt"]
 	if !ok {
-		return &keystore.KeyStore{}, errors.New("tls.crt not found")
+		return []byte{}, errors.New("tls.crt not found")
 	}
 	certs := []keystore.Certificate{}
 	for p, rest := pem.Decode(crt); p != nil; p, rest = pem.Decode(rest) {
@@ -186,10 +172,10 @@ func getKeyStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) {
 	}
 	p, _ := pem.Decode(key)
 	if p == nil {
-		return &keystore.KeyStore{}, errors.New("no block found in key.tls, private key should have at least one pem block")
+		return []byte{}, errors.New("no block found in key.tls, private key should have at least one pem block")
 	}
 	if !strings.Contains(p.Type, "PRIVATE KEY") {
-		return &keystore.KeyStore{}, errors.New("private key block not of type PRIVATE KEY")
+		return []byte{}, errors.New("private key block not of type PRIVATE KEY")
 	}
 
 	keyStore["alias"] = &keystore.PrivateKeyEntry{
@@ -199,14 +185,20 @@ func getKeyStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) {
 		PrivKey:   p.Bytes,
 		CertChain: certs,
 	}
-	return &keyStore, nil
+	buffer := bytes.Buffer{}
+	err := keystore.Encode(&buffer, keyStore, []byte(password))
+	if err != nil {
+		log.Error(err, "unable to encode keystore", "keystore", keyStore)
+		return []byte{}, err
+	}
+	return buffer.Bytes(), nil
 }
 
-func getTrustStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) {
+func getTrustStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
 	ca, ok := secret.Data["ca.crt"]
 	if !ok {
-		return &keystore.KeyStore{}, errors.New("ca bundle key not found: ca.crt")
+		return []byte{}, errors.New("ca bundle key not found: ca.crt")
 	}
 	i := 0
 	for p, rest := pem.Decode(ca); p != nil; p, rest = pem.Decode(rest) {
@@ -220,5 +212,11 @@ func getTrustStoreFromSecret(secret *corev1.Secret) (*keystore.KeyStore, error) 
 			},
 		}
 	}
-	return &keyStore, nil
+	buffer := bytes.Buffer{}
+	err := keystore.Encode(&buffer, keyStore, []byte(password))
+	if err != nil {
+		log.Error(err, "unable to encode keystore", "keystore", keyStore)
+		return []byte{}, err
+	}
+	return buffer.Bytes(), nil
 }
