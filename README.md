@@ -31,7 +31,7 @@ oc new-project cert-utils-operator
 Deploy the cluster resources. Given that a number of elevated permissions are required to resources at a cluster scope the account you are currently logged in must have elevated rights.
 
 ```shell
-oc create -f deploy
+oc apply -f deploy
 ```
 
 ## Populating route certificates
