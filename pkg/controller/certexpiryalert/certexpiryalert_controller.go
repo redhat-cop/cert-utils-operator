@@ -135,10 +135,10 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	if value, ok := instance.GetAnnotations()[certExpiryAlertAnnotation]; ok && value != "true" {
+	if value, _ := instance.GetAnnotations()[certExpiryAlertAnnotation]; value != "true" {
 		return reconcile.Result{}, nil
 	}
-	if value, ok := instance.Data["ca.crt"]; ok && len(value) != 0 {
+	if value, ok := instance.Data["tls.crt"]; ok && len(value) == 0 {
 		return reconcile.Result{}, nil
 	}
 	expiry := getExpiry(instance)
