@@ -128,18 +128,24 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 	value, _ := instance.GetAnnotations()[javaKeyStoresAnnotation]
 	if value == "true" {
-		keyStore, err := getKeyStoreFromSecret(instance)
-		if err != nil {
-			log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
-			return reconcile.Result{}, err
+		if value, ok := instance.Data["tls.crt"]; ok && len(value) != 0 {
+			if value, ok := instance.Data["tls.key"]; ok && len(value) != 0 {
+				keyStore, err := getKeyStoreFromSecret(instance)
+				if err != nil {
+					log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
+					return reconcile.Result{}, err
+				}
+				instance.Data["keystore.jks"] = keyStore
+			}
 		}
-		trustStore, err := getTrustStoreFromSecret(instance)
-		if err != nil {
-			log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
-			return reconcile.Result{}, err
+		if value, ok := instance.Data["ca.crt"]; ok && len(value) != 0 {
+			trustStore, err := getTrustStoreFromSecret(instance)
+			if err != nil {
+				log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
+				return reconcile.Result{}, err
+			}
+			instance.Data["truststore.jks"] = trustStore
 		}
-		instance.Data["keystore.jks"] = keyStore
-		instance.Data["truststore.jks"] = trustStore
 	} else {
 		delete(instance.Data, "keystore.jks")
 		delete(instance.Data, "truststore.jks")

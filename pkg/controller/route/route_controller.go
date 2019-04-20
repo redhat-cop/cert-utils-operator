@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const CertAnnotation = "raffa.systems/certs-from-secret"
-const ReplaceDestCAAnnotation = "raffa.systems/replace-dest-CA"
+const certAnnotation = "raffa.systems/certs-from-secret"
+const replaceDestCAAnnotation = "raffa.systems/replace-dest-CA"
 
 var log = logf.Log.WithName("controller_route")
 
@@ -56,12 +56,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
 	isAnnotatedRoute := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldSecret, _ := e.MetaOld.GetAnnotations()[CertAnnotation]
-			newSecret, _ := e.MetaNew.GetAnnotations()[CertAnnotation]
+			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotation]
+			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotation]
 			return oldSecret != newSecret
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			_, ok := e.Meta.GetAnnotations()[CertAnnotation]
+			_, ok := e.Meta.GetAnnotations()[certAnnotation]
 			return ok
 		},
 	}
@@ -147,7 +147,7 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	secretName, ok := instance.GetAnnotations()[CertAnnotation]
+	secretName, ok := instance.GetAnnotations()[certAnnotation]
 	if !ok {
 		instance.Spec.TLS.Key = ""
 		instance.Spec.TLS.Certificate = ""
@@ -188,7 +188,7 @@ func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route,
 	}
 	result := []routev1.Route{}
 	for _, route := range routeList.Items {
-		if secretName := route.GetAnnotations()[CertAnnotation]; secretName == secret.Name {
+		if secretName := route.GetAnnotations()[certAnnotation]; secretName == secret.Name {
 			result = append(result, route)
 		}
 	}
@@ -241,12 +241,20 @@ func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q wo
 func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) {
 	if route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt" {
 		// here we need to replace the terminating certifciate
-		route.Spec.TLS.Key = string(secret.Data["tls.key"])
-		route.Spec.TLS.Certificate = string(secret.Data["tls.crt"])
-		route.Spec.TLS.CACertificate = string(secret.Data["ca.crt"])
+		if value, ok := secret.Data["tls.key"]; ok && len(value) != 0 {
+			route.Spec.TLS.Key = string(value)
+		}
+		if value, ok := secret.Data["tls.crt"]; ok && len(value) != 0 {
+			route.Spec.TLS.Certificate = string(value)
+		}
+		if value, ok := secret.Data["ca.crt"]; ok && len(value) != 0 {
+			route.Spec.TLS.CACertificate = string(value)
+		}
 	}
-	if replace, _ := route.GetAnnotations()[ReplaceDestCAAnnotation]; replace == "true" {
+	if replace, _ := route.GetAnnotations()[replaceDestCAAnnotation]; replace == "true" {
 		// here we also need to replace the ca
-		route.Spec.TLS.DestinationCACertificate = string(secret.Data["ca.crt"])
+		if value, ok := secret.Data["ca.crt"]; ok && len(value) != 0 {
+			route.Spec.TLS.DestinationCACertificate = string(value)
+		}
 	}
 }

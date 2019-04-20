@@ -29,7 +29,7 @@ oc new-project cert-utils-operator
 Deploy the cluster resources. Given that a number of elevated permissions are required to resources at a cluster scope the account you are currently logged in must have elevated rights
 
 ```shell
-$ oc create -f deploy
+oc create -f deploy
 ```
 
 ## Populating route certificates
@@ -86,7 +86,7 @@ The timing of this alerting mechanism can be controller with the following annot
 
 ## Local Development
 
-Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions. 
+Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
 
 Clone the repository, then resolve all depdendencies using `dep`
 

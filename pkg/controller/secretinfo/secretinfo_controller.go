@@ -122,8 +122,12 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	value, _ := instance.GetAnnotations()[certInfoAnnotation]
 	if value == "true" {
-		instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
-		instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
+		if value, ok := instance.Data["tls.crt"]; ok && len(value) != 0 {
+			instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
+		}
+		if value, ok := instance.Data["ca.crt"]; ok && len(value) != 0 {
+			instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
+		}
 	} else {
 		delete(instance.Data, "tls.crt.info")
 		delete(instance.Data, "ca.crt.info")
