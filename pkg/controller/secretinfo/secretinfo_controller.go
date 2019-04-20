@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 
 	"github.com/grantae/certinfo"
-	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/util"
+	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

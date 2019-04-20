@@ -10,7 +10,7 @@ import (
 	"time"
 
 	keystore "github.com/pavel-v-chernykh/keystore-go"
-	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/util"
+	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

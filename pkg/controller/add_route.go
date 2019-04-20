@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/raffaelespazzoli/cert-utils-operator/pkg/controller/route"
+	"github.com/redhat-cop/cert-utils-operator/pkg/controller/route"
 )
 
 func init() {
