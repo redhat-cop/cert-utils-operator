@@ -1,35 +1,51 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cert-utils-operator
+rules:
+# Operator Business Logic
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - events
+  - secrets
+  verbs:
+  - "*"
+# Operator Business Logic
+- apiGroups:
+  - " route.openshift.io"
+  resources:
+  - routes
+  verbs:
+  - "*"  
+---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: cert-utils-operator
 rules:
+# - apiGroups:
+#   - ""
+#   resources:
+#   - namespaces
+#   verbs:
+#   - get
+# leader election   
 - apiGroups:
   - ""
   resources:
-  - pods
-  - services
-  - endpoints
-  - persistentvolumeclaims
-  - events
   - configmaps
-  - secrets
   verbs:
-  - "*"
+  - "*"  
+#Metrics  
 - apiGroups:
   - ""
   resources:
-  - namespaces
+  - services
   verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
-  verbs:
-  - "*"
+  - "*"  
+# Metrics  
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -37,6 +53,7 @@ rules:
   verbs:
   - "get"
   - "create"
+# Metrics  
 - apiGroups:
   - apps
   resources:
@@ -45,3 +62,4 @@ rules:
   - cert-utils-operator
   verbs:
   - "update"
+
