@@ -17,7 +17,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   annotations:
-    raffa.systems/certs-from-secret: "test1"
+    cert-utils-operator.redhat-cop.io/certs-from-secret: "test1"
   name: test1
 spec:
   tls:
@@ -30,8 +30,8 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   annotations:
-    raffa.systems/certs-from-secret: "test1"
-    raffa.systems/replace-dest-CA: "true"
+    cert-utils-operator.redhat-cop.io/certs-from-secret: "test1"
+    cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"
   name: test2
 spec:
   tls:

@@ -23,7 +23,7 @@ import (
 
 var log = logf.Log.WithName("controller_secretinfo")
 
-const certInfoAnnotation = "raffa.systems/generate-cert-info"
+const certInfoAnnotation = util.AnnotationBase + "/generate-cert-info"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller

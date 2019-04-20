@@ -36,7 +36,7 @@ oc create -f deploy
 
 This feature works on secure routes with `edge` or `reencrypt` type of termination.
 
-This feature is activated with the following annotation on a route: `raffa.systems/certs-from-secret: "<secret-name>"`.
+This feature is activated with the following annotation on a route: `cert-utils-operator.redhat-cop.io/certs-from-secret: "<secret-name>"`.
 
 The following fields of the route will be updated:
 
@@ -44,24 +44,24 @@ The following fields of the route will be updated:
 2. `certficiate` with the content of `tls.crt`
 3. `caCertificate` with the content of `ca.crt`
 
-Only for `reencrypt` routes, if the optional annotation: `raffa.systems/replace-dest-CA: "true"` is set, then also the following field is populated:
+Only for `reencrypt` routes, if the optional annotation: `cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"` is set, then also the following field is populated:
 
 4. `destinationCACertificate` with the content of `ca.crt`
 
 ## Creating java keystore and truststore
 
-This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `raffa.systems/generate-java-keystores: "true"`.
+This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-java-keystores: "true"`.
 
 When this annotation is set two more entries are added to the secret:
 
 1. `keystore.jks`: this Java keystore contains the `tls.crt` and `tls.key` certificate.
 2. `trustsstore.jks`: this Java keystore contains the `ca.crt` certificate.
 
-The default password for these keystores is `changeme`. The password can be changedby adding the following optional annotation: `raffa.systems/java-keystore-password: <password>`
+The default password for these keystores is `changeme`. The password can be changedby adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`
 
 ## Showing info on the certificates
 
-This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `raffa.systems/generate-cert-info: "true"`.
+This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-cert-info: "true"`.
 
 When this annotation is set two more entries are added to the secret:
 
@@ -70,7 +70,7 @@ When this annotation is set two more entries are added to the secret:
 
 ## Alerting when a certificate is about to expire
 
-This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `raffa.systems/generate-cert-expiry-alert: "true"`.
+This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-cert-expiry-alert: "true"`.
 
 When this annotation is set the secret will generate a Kubernetes `Warning` Event if the certicate is about to expire.
 
@@ -80,9 +80,9 @@ The timing of this alerting mechanism can be controller with the following annot
 
 | Annotation  | Default  | Description  |
 |:-|:-:|---|
-| `raffa.systems/cert-expiry-check-frequency`  | 7 days  | with which frequency should the system check is a certificate is expiring  |
-| `raffa.systems/cert-soon-to-expire-check-frequency`  | 1 hour  | with which frequency should the system check is a certificate is expired, once it's close to expiring  |
-| `raffa.systems/cert-soon-to-expire-threshold`  | 90 days  | what is the interval of time below which we conside rthe certificate close to expiry  |
+| `cert-utils-operator.redhat-cop.io/cert-expiry-check-frequency`  | 7 days  | with which frequency should the system check is a certificate is expiring  |
+| `cert-utils-operator.redhat-cop.io/cert-soon-to-expire-check-frequency`  | 1 hour  | with which frequency should the system check is a certificate is expired, once it's close to expiring  |
+| `cert-utils-operator.redhat-cop.io/cert-soon-to-expire-threshold`  | 90 days  | what is the interval of time below which we conside rthe certificate close to expiry  |
 
 ## Local Development
 

@@ -25,10 +25,10 @@ import (
 
 var log = logf.Log.WithName("controller_certexpiryalert")
 
-const certExpiryAlertAnnotation = "raffa.systems/generate-cert-expiry-alert"
-const certExpiryCheckFrequencyAnnotation = "raffa.systems/cert-expiry-check-frequency"
-const certSoonToExpireFrequencyAnnotation = "raffa.systems/cert-soon-to-expire-check-frequency"
-const certSoonToExpireThresholdAnnotation = "raffa.systems/cert-soon-to-expire-threshold"
+const certExpiryAlertAnnotation = util.AnnotationBase + "/generate-cert-expiry-alert"
+const certExpiryCheckFrequencyAnnotation = util.AnnotationBase + "/cert-expiry-check-frequency"
+const certSoonToExpireFrequencyAnnotation = util.AnnotationBase + "/cert-soon-to-expire-check-frequency"
+const certSoonToExpireThresholdAnnotation = util.AnnotationBase + "/cert-soon-to-expire-threshold"
 
 // 90 days
 const defaultSoonToExpireThreshold = time.Duration(1000 * 1000 * 1000 * 60 * 60 * 24 * 90)

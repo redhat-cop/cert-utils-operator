@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const certAnnotation = "raffa.systems/certs-from-secret"
-const replaceDestCAAnnotation = "raffa.systems/replace-dest-CA"
+const certAnnotation = util.AnnotationBase + "/certs-from-secret"
+const replaceDestCAAnnotation = util.AnnotationBase + "/replace-dest-CA"
 
 var log = logf.Log.WithName("controller_route")
 

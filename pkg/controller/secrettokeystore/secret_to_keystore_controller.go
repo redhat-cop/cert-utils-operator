@@ -27,8 +27,8 @@ import (
 
 var log = logf.Log.WithName("controller_secret_to_keystore")
 
-const javaKeyStoresAnnotation = "raffa.systems/generate-java-keystores"
-const keystorepasswordAnnotation = "raffa.systems/java-keystore-password"
+const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
+const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
 const defaultpassword = "changeme"
 
 /**
