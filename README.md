@@ -43,7 +43,7 @@ When this annotation is set two more entries are added to the secret:
 1. `keystore.jks`: this Java keystore contains the `tls.crt` and `tls.key` certificate.
 2. `trustsstore.jks`: this Java keystore contains the `ca.crt` certificate.
 
-The password of these keystores is always `changeme`.
+The default password for these keystores is `changeme`. The password can be changedby adding the following optional annotation: `raffa.systems/java-keystore-password: <password>`
 
 ## Showing info on the certificates
 

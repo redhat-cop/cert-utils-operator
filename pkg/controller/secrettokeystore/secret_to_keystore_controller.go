@@ -28,7 +28,8 @@ import (
 var log = logf.Log.WithName("controller_secret_to_keystore")
 
 const javaKeyStoresAnnotation = "raffa.systems/generate-java-keystores"
-const password = "changeme"
+const keystorepasswordAnnotation = "raffa.systems/java-keystore-password"
+const defaultpassword = "changeme"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -186,7 +187,7 @@ func getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 		CertChain: certs,
 	}
 	buffer := bytes.Buffer{}
-	err := keystore.Encode(&buffer, keyStore, []byte(password))
+	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(secret)))
 	if err != nil {
 		log.Error(err, "unable to encode keystore", "keystore", keyStore)
 		return []byte{}, err
@@ -213,10 +214,17 @@ func getTrustStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 		}
 	}
 	buffer := bytes.Buffer{}
-	err := keystore.Encode(&buffer, keyStore, []byte(password))
+	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(secret)))
 	if err != nil {
 		log.Error(err, "unable to encode keystore", "keystore", keyStore)
 		return []byte{}, err
 	}
 	return buffer.Bytes(), nil
+}
+
+func getPassword(secret *corev1.Secret) string {
+	if pwd, ok := secret.GetAnnotations()[keystorepasswordAnnotation]; ok && pwd != "" {
+		return pwd
+	}
+	return defaultpassword
 }
