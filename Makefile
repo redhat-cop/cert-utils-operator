@@ -28,7 +28,7 @@ manager: generate fmt vet
 
 # Build manager binary
 manager-osx: generate fmt vet
-	go build -o build/_output/bin/cert-utils-operator GOOS=darwin  -ldflags $(LDFLAGS) github.com/redhat-cop/cert-utils-operator/cmd/manager
+	GOOS=darwin go build -o build/_output/bin/cert-utils-operator -ldflags $(LDFLAGS) github.com/redhat-cop/cert-utils-operator/cmd/manager
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
@@ -74,7 +74,7 @@ docker-push-release:  docker-tag-release
 
 # Build the docker image
 docker-build:
-	docker build . -t ${IMG}
+	docker build . -t ${IMG} -f build/Dockerfile
 
 # Push the docker image
 docker-push:
