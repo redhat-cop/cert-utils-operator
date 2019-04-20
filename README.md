@@ -16,7 +16,7 @@ The functionalities are the following:
 1. [Ability to populate route certificates](#Populating-route-certificates)
 2. [Ability to create java keystore and truststore from the certificates](#Creating-java-keystore-and-truststore)
 3. [Ability to show info regarding the certificates](#Showing-info-on-the-certificates)
-4. [Ability to alert when a certificate is about to expire](Alerting-when-a-certificate-is-about-to-expire)
+4. [Ability to alert when a certificate is about to expire](#Alerting-when-a-certificate-is-about-to-expire)
 
 All these feature are activated via opt-in annotations.
 
