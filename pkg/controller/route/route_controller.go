@@ -87,7 +87,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			if newSecret.Type != util.TLSSecret {
 				return false
 			}
-			return reflect.DeepEqual(oldSecret.Data, newSecret.Data)
+			return !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) ||
+				!reflect.DeepEqual(newSecret.Data["tls.key"], oldSecret.Data["tls.key"]) ||
+				!reflect.DeepEqual(newSecret.Data["ca.crt"], oldSecret.Data["ca.crt"])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)

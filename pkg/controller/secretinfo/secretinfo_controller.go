@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"reflect"
 
 	"github.com/grantae/certinfo"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
@@ -51,6 +52,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	isAnnotatedSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
 			newSecret, ok := e.ObjectNew.(*corev1.Secret)
 			if !ok {
 				return false
@@ -62,6 +67,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			newValue, _ := e.MetaNew.GetAnnotations()[certInfoAnnotation]
 			old := oldValue == "true"
 			new := newValue == "true"
+			// if the content has changed we trigger is the annotation is there
+			if !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) ||
+				!reflect.DeepEqual(newSecret.Data["ca.crt"], oldSecret.Data["ca.crt"]) {
+				return new
+			}
+			// otherwise we trigger if the annotation has changed
 			return old != new
 		},
 		CreateFunc: func(e event.CreateEvent) bool {

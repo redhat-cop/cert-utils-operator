@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
@@ -65,6 +66,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	isAnnotatedSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
 			newSecret, ok := e.ObjectNew.(*corev1.Secret)
 			if !ok {
 				return false
@@ -76,6 +81,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			newValue, _ := e.MetaNew.GetAnnotations()[certExpiryAlertAnnotation]
 			old := oldValue == "true"
 			new := newValue == "true"
+			// if the content has changed we trigger is the annotation is there
+			if !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) {
+				return new
+			}
+			// otherwise we trigger if the annotation has changed
 			return old != new
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
