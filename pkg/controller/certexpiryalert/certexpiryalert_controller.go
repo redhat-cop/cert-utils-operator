@@ -82,7 +82,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			old := oldValue == "true"
 			new := newValue == "true"
 			// if the content has changed we trigger is the annotation is there
-			if !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) {
+			if !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) {
 				return new
 			}
 			// otherwise we trigger if the annotation has changed
@@ -148,7 +148,7 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 	if value, _ := instance.GetAnnotations()[certExpiryAlertAnnotation]; value != "true" {
 		return reconcile.Result{}, nil
 	}
-	if value, ok := instance.Data["tls.crt"]; ok && len(value) == 0 {
+	if value, ok := instance.Data[util.Cert]; ok && len(value) == 0 {
 		return reconcile.Result{}, nil
 	}
 	expiry := getExpiry(instance)
@@ -174,7 +174,7 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 
 func getExpiry(secret *corev1.Secret) time.Time {
 	result := time.Time{}
-	for p, rest := pem.Decode(secret.Data["tls.crt"]); p != nil; p, rest = pem.Decode(rest) {
+	for p, rest := pem.Decode(secret.Data[util.Cert]); p != nil; p, rest = pem.Decode(rest) {
 		cert, err := x509.ParseCertificate(p.Bytes)
 		if err != nil {
 			log.Error(err, "unable to decode this entry, skipping", "entry", string(p.Bytes))

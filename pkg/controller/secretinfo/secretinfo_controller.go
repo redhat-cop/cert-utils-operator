@@ -25,6 +25,8 @@ import (
 var log = logf.Log.WithName("controller_secretinfo")
 
 const certInfoAnnotation = util.AnnotationBase + "/generate-cert-info"
+const certInfo = "tls.crt.info"
+const caInfo = "ca.crt.info"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -68,8 +70,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			old := oldValue == "true"
 			new := newValue == "true"
 			// if the content has changed we trigger is the annotation is there
-			if !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) ||
-				!reflect.DeepEqual(newSecret.Data["ca.crt"], oldSecret.Data["ca.crt"]) {
+			if !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) ||
+				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]) {
 				return new
 			}
 			// otherwise we trigger if the annotation has changed
@@ -133,15 +135,15 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	value, _ := instance.GetAnnotations()[certInfoAnnotation]
 	if value == "true" {
-		if value, ok := instance.Data["tls.crt"]; ok && len(value) != 0 {
-			instance.Data["tls.crt.info"] = []byte(generateCertInfo(instance.Data["tls.crt"]))
+		if value, ok := instance.Data[util.Cert]; ok && len(value) != 0 {
+			instance.Data[certInfo] = []byte(generateCertInfo(instance.Data[util.Cert]))
 		}
-		if value, ok := instance.Data["ca.crt"]; ok && len(value) != 0 {
-			instance.Data["ca.crt.info"] = []byte(generateCertInfo(instance.Data["ca.crt"]))
+		if value, ok := instance.Data[util.CA]; ok && len(value) != 0 {
+			instance.Data[caInfo] = []byte(generateCertInfo(instance.Data[util.CA]))
 		}
 	} else {
-		delete(instance.Data, "tls.crt.info")
-		delete(instance.Data, "ca.crt.info")
+		delete(instance.Data, certInfo)
+		delete(instance.Data, caInfo)
 	}
 
 	err = r.client.Update(context.TODO(), instance)

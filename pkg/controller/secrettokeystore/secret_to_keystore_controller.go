@@ -31,6 +31,8 @@ var log = logf.Log.WithName("controller_secret_to_keystore")
 const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
 const defaultpassword = "changeme"
+const keystoreName = "keystore.jks"
+const truststoreName = "truststore.jks"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -74,9 +76,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			old := oldValue == "true"
 			new := newValue == "true"
 			// if the content has changed we trigger is the annotation is there
-			if !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) ||
-				!reflect.DeepEqual(newSecret.Data["tls.key"], oldSecret.Data["tls.key"]) ||
-				!reflect.DeepEqual(newSecret.Data["ca.crt"], oldSecret.Data["ca.crt"]) {
+			if !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) ||
+				!reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]) ||
+				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]) {
 				return new
 			}
 			// otherwise we trigger if the annotation has changed
@@ -140,27 +142,27 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 	value, _ := instance.GetAnnotations()[javaKeyStoresAnnotation]
 	if value == "true" {
-		if value, ok := instance.Data["tls.crt"]; ok && len(value) != 0 {
-			if value, ok := instance.Data["tls.key"]; ok && len(value) != 0 {
+		if value, ok := instance.Data[util.Cert]; ok && len(value) != 0 {
+			if value, ok := instance.Data[util.Key]; ok && len(value) != 0 {
 				keyStore, err := getKeyStoreFromSecret(instance)
 				if err != nil {
 					log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
 					return reconcile.Result{}, err
 				}
-				instance.Data["keystore.jks"] = keyStore
+				instance.Data[keystoreName] = keyStore
 			}
 		}
-		if value, ok := instance.Data["ca.crt"]; ok && len(value) != 0 {
+		if value, ok := instance.Data[util.CA]; ok && len(value) != 0 {
 			trustStore, err := getTrustStoreFromSecret(instance)
 			if err != nil {
 				log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
 				return reconcile.Result{}, err
 			}
-			instance.Data["truststore.jks"] = trustStore
+			instance.Data[truststoreName] = trustStore
 		}
 	} else {
-		delete(instance.Data, "keystore.jks")
-		delete(instance.Data, "truststore.jks")
+		delete(instance.Data, keystoreName)
+		delete(instance.Data, truststoreName)
 	}
 
 	err = r.client.Update(context.TODO(), instance)
@@ -174,11 +176,11 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 
 func getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
-	key, ok := secret.Data["tls.key"]
+	key, ok := secret.Data[util.Key]
 	if !ok {
 		return []byte{}, errors.New("tls.key not found")
 	}
-	crt, ok := secret.Data["tls.crt"]
+	crt, ok := secret.Data[util.Cert]
 	if !ok {
 		return []byte{}, errors.New("tls.crt not found")
 	}
@@ -215,7 +217,7 @@ func getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 
 func getTrustStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
-	ca, ok := secret.Data["ca.crt"]
+	ca, ok := secret.Data[util.CA]
 	if !ok {
 		return []byte{}, errors.New("ca bundle key not found: ca.crt")
 	}

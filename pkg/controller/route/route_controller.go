@@ -87,9 +87,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			if newSecret.Type != util.TLSSecret {
 				return false
 			}
-			return !reflect.DeepEqual(newSecret.Data["tls.crt"], oldSecret.Data["tls.crt"]) ||
-				!reflect.DeepEqual(newSecret.Data["tls.key"], oldSecret.Data["tls.key"]) ||
-				!reflect.DeepEqual(newSecret.Data["ca.crt"], oldSecret.Data["ca.crt"])
+			return !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) ||
+				!reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]) ||
+				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA])
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
@@ -243,19 +243,19 @@ func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q wo
 func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) {
 	if route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt" {
 		// here we need to replace the terminating certifciate
-		if value, ok := secret.Data["tls.key"]; ok && len(value) != 0 {
+		if value, ok := secret.Data[util.Key]; ok && len(value) != 0 {
 			route.Spec.TLS.Key = string(value)
 		}
-		if value, ok := secret.Data["tls.crt"]; ok && len(value) != 0 {
+		if value, ok := secret.Data[util.Cert]; ok && len(value) != 0 {
 			route.Spec.TLS.Certificate = string(value)
 		}
-		if value, ok := secret.Data["ca.crt"]; ok && len(value) != 0 {
+		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
 			route.Spec.TLS.CACertificate = string(value)
 		}
 	}
 	if replace, _ := route.GetAnnotations()[replaceDestCAAnnotation]; replace == "true" {
 		// here we also need to replace the ca
-		if value, ok := secret.Data["ca.crt"]; ok && len(value) != 0 {
+		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
 			route.Spec.TLS.DestinationCACertificate = string(value)
 		}
 	}
