@@ -4,7 +4,7 @@
 
 Cert utils operator is a set of functionlities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
 
-Certificates are assumed to be avalaible in a [secret](https://kubernetes.io/docs/concepts/configuration/secret/) of type `kubernetes.io/tls` (other types of secrets are *ignored* by this operator).
+Certificates are assumed to be available in a [secret](https://kubernetes.io/docs/concepts/configuration/secret/) of type `kubernetes.io/tls` (other types of secrets are *ignored* by this operator).
 By convention this type of secrets have three optional entries:
 
 1. `tls.key`: the private key of the certificate.
@@ -22,7 +22,7 @@ All these feature are activated via opt-in annotations.
 
 ## Deploying the Operator
 
-This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommeded.
+This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
 
 ```shell
 oc new-project cert-utils-operator
@@ -63,7 +63,7 @@ A such annotated secret looks like the following:
 
 ![keystore](media/keystore.png)
 
-The default password for these keystores is `changeme`. The password can be changedby adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`.
+The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`.
 
 ## Showing info on the certificates
 
@@ -82,7 +82,7 @@ A such annotated secret looks like the following:
 
 This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-cert-expiry-alert: "true"`.
 
-When this annotation is set the secret will generate a Kubernetes `Warning` Event if the certicate is about to expire.
+When this annotation is set the secret will generate a Kubernetes `Warning` Event if the certificate is about to expire.
 
 This feature is useful when the certificates are not renewed by an automatic system.
 
@@ -92,7 +92,7 @@ The timing of this alerting mechanism can be controller with the following annot
 |:-|:-:|---|
 | `cert-utils-operator.redhat-cop.io/cert-expiry-check-frequency`  | 7 days  | with which frequency should the system check is a certificate is expiring  |
 | `cert-utils-operator.redhat-cop.io/cert-soon-to-expire-check-frequency`  | 1 hour  | with which frequency should the system check is a certificate is expired, once it's close to expiring  |
-| `cert-utils-operator.redhat-cop.io/cert-soon-to-expire-threshold`  | 90 days  | what is the interval of time below which we conside rthe certificate close to expiry  |
+| `cert-utils-operator.redhat-cop.io/cert-soon-to-expire-threshold`  | 90 days  | what is the interval of time below which we consider the certificate close to expiry  |
 
 Here is an example of a certificate soon-to-expiry event:
 
@@ -102,7 +102,7 @@ Here is an example of a certificate soon-to-expiry event:
 
 Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
 
-Clone the repository, then resolve all depdendencies using `dep`:
+Clone the repository, then resolve all dependencies using `dep`:
 
 ```shell
 dep ensure
