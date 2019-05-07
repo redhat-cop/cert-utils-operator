@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/redhat-cop/cert-utils-operator.svg?branch=master)](https://travis-ci.org/redhat-cop/cert-utils-operator) [![Docker Repository on Quay](https://quay.io/repository/redhat-cop/cert-utils-operator/status "Docker Repository on Quay")](https://quay.io/repository/redhat-cop/cert-utils-operator)
 
-Cert utils operator is a set of functionlities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
+Cert utils operator is a set of functionalities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
 
 Certificates are assumed to be available in a [secret](https://kubernetes.io/docs/concepts/configuration/secret/) of type `kubernetes.io/tls` (other types of secrets are *ignored* by this operator).
 By convention this type of secrets have three optional entries:
@@ -43,12 +43,9 @@ This feature is activated with the following annotation on a route: `cert-utils-
 The following fields of the route will be updated:
 
 1. `key` with the content of `tls.key`.
-2. `certficiate` with the content of `tls.crt`.
+2. `certificate` with the content of `tls.crt`.
 3. `caCertificate` with the content of `ca.crt`.
-
-Only for `reencrypt` routes, if the optional annotation: `cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"` is set, then also the following field is populated:
-
-4. `destinationCACertificate` with the content of `ca.crt`.
+4. `destinationCACertificate` with the content of `ca.crt`. Only for `reencrypt` routes, if the optional annotation: `cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"` is set.
 
 ## Creating java keystore and truststore
 
