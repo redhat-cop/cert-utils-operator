@@ -17,6 +17,7 @@ The functionalities are the following:
 2. [Ability to create java keystore and truststore from the certificates](#Creating-java-keystore-and-truststore)
 3. [Ability to show info regarding the certificates](#Showing-info-on-the-certificates)
 4. [Ability to alert when a certificate is about to expire](#Alerting-when-a-certificate-is-about-to-expire)
+5. [Ability to inject ca bundles in ValidatingWebhookConfiguration, MutatingWebhookConfiguration, CustomResourceDefinition object](#CA-injection)
 
 All these feature are activated via opt-in annotations.
 
@@ -94,6 +95,17 @@ The timing of this alerting mechanism can be controller with the following annot
 Here is an example of a certificate soon-to-expiry event:
 
 ![cert-expiry](media/cert-expiry.png)
+
+## CA Injection
+
+[ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) and [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. I order to do so over an encrypted connection a CA bundle needs to be configured. In these objects the cA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
+This feature allows you to inject the ca bundle from either a `kubernetes.io/tls` secret or from the service_ca.crt file mounted in every pod. The latter is useful if you are protecting your webhook with a certificate generated with the [service service certificate secret](https://docs.openshift.com/container-platform/3.11/dev_guide/secrets.html#service-serving-certificate-secrets) feature.
+
+This feature is activated by the following annotations:
+
+1. `cert-utils-operator.redhat-cop.io/injectca-from-secret: <secret namespace>/<secret name>`
+
+2. `cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"`
 
 ## Local Development
 
