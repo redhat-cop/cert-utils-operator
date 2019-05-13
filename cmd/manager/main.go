@@ -16,6 +16,7 @@ import (
 	"github.com/redhat-cop/cert-utils-operator/pkg/apis"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller"
 	"github.com/spf13/pflag"
+	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,6 +30,8 @@ var (
 	metricsPort int32 = 8383
 )
 var log = logf.Log.WithName("cmd")
+
+//var SystemCaFilename = flag.String("systemCaFilename", "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt", "file where the system ca can be found")
 
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -101,6 +104,12 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Setup Scheme for all resources
+	if err := crd.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
