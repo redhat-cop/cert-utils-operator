@@ -53,7 +53,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCertExpiryAlert{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("cert-utils")}
+	return &ReconcileCertExpiryAlert{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("certexpiryalert-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -233,4 +233,12 @@ func getExpiryCheckFrequency(secret *corev1.Secret) time.Duration {
 		return defaultExpireFrequency
 	}
 	return tthreshold
+}
+
+func (r *ReconcileCertExpiryAlert) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
+	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
+	return reconcile.Result{
+		RequeueAfter: time.Minute * 2,
+		Requeue:      true,
+	}, nil
 }

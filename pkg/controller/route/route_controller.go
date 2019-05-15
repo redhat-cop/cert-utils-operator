@@ -3,17 +3,18 @@ package route
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -42,7 +43,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileRoute{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileRoute{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("route-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -121,8 +122,9 @@ var _ reconcile.Reconciler = &ReconcileRoute{}
 type ReconcileRoute struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a Route object and makes changes based on the state read
@@ -163,14 +165,14 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		}, secret)
 		if err != nil {
 			log.Error(err, "unable to find referenced secret", "secret", secretName)
-			return reconcile.Result{}, err
+			return r.manageError(err, instance)
 		}
 		populateRouteWithCertifcates(instance, secret)
 	}
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, "unable to update route", "route", instance)
-		return reconcile.Result{}, err
+		return r.manageError(err, instance)
 	}
 
 	// if we are here we know it's because a route was create/modified or its referenced secret was created/modified
@@ -259,4 +261,12 @@ func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) {
 			route.Spec.TLS.DestinationCACertificate = string(value)
 		}
 	}
+}
+
+func (r *ReconcileRoute) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
+	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
+	return reconcile.Result{
+		RequeueAfter: time.Minute * 2,
+		Requeue:      true,
+	}, nil
 }

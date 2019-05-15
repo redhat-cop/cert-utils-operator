@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -47,7 +48,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSecret{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileSecret{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("secret-to-keystore-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -112,8 +113,9 @@ var _ reconcile.Reconciler = &ReconcileSecret{}
 type ReconcileSecret struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a Secret object and makes changes based on the state read
@@ -168,7 +170,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, "unable to update secrer", "secret", instance.GetName())
-		return reconcile.Result{}, err
+		return r.manageError(err, instance)
 	}
 
 	return reconcile.Result{}, nil
@@ -247,4 +249,12 @@ func getPassword(secret *corev1.Secret) string {
 		return pwd
 	}
 	return defaultpassword
+}
+
+func (r *ReconcileSecret) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
+	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
+	return reconcile.Result{
+		RequeueAfter: time.Minute * 2,
+		Requeue:      true,
+	}, nil
 }
