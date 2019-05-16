@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -30,7 +32,7 @@ import (
  */
 // newReconciler returns a new reconcile.Reconciler
 func newCRDReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCRD{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileCRD{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("crd-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -150,8 +152,9 @@ var _ reconcile.Reconciler = &ReconcileCRD{}
 type ReconcileCRD struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a mutatingWebhookConfiguration object and makes changes based on the state read
@@ -186,7 +189,7 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 		caBundle, err = ioutil.ReadFile(systemCAFile)
 		if err != nil {
 			log.Error(err, "unable to read file", "file", systemCAFile)
-			return reconcile.Result{}, err
+			return r.manageError(err, instance)
 		}
 	}
 	if secretNamespacedName, ok := instance.GetAnnotations()[certAnnotationSecret]; ok {
@@ -194,7 +197,7 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
 			log.Error(err, "unable to retrive ca from secret", "secret", secretNamespacedName)
-			return reconcile.Result{}, err
+			return r.manageError(err, instance)
 		}
 	}
 
@@ -204,6 +207,9 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 			instance.Spec.Conversion.WebhookClientConfig.CABundle = caBundle
 			err = r.client.Update(context.TODO(), instance)
 		}
+	}
+	if err != nil {
+		return r.manageError(err, instance)
 	}
 
 	return reconcile.Result{}, err
@@ -320,4 +326,12 @@ func (r *ReconcileCRD) getSecretCA(secretName string, secretNamespace string) ([
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
+}
+
+func (r *ReconcileCRD) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
+	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
+	return reconcile.Result{
+		RequeueAfter: time.Minute * 2,
+		Requeue:      true,
+	}, nil
 }

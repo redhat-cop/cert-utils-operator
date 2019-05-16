@@ -17,8 +17,8 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   annotations:
-    cert-utils-operator.redhat-cop.io/certs-from-secret: "test1"
-  name: test1
+    cert-utils-operator.redhat-cop.io/certs-from-secret: "test-ocp-secret"
+  name: test-ocp-secret
 spec:
   tls:
     termination: edge
@@ -32,11 +32,25 @@ metadata:
   annotations:
     cert-utils-operator.redhat-cop.io/certs-from-secret: "test1"
     cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"
+  name: test1
+spec:
+  tls:
+    termination: reencrypt
+  to:
+    kind: Service
+    name: test
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    cert-utils-operator.redhat-cop.io/certs-from-secret: "test2"
+    cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"
   name: test2
 spec:
   tls:
     termination: reencrypt
   to:
     kind: Service
-    name: test   
+    name: test       
 

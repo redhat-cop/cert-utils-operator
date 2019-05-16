@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -62,7 +64,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newValidatingReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileValidatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileValidatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("validatingwebhookconfiguration-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -182,8 +184,9 @@ var _ reconcile.Reconciler = &ReconcileValidatingWebhookConfiguration{}
 type ReconcileValidatingWebhookConfiguration struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a ValidatingWebhookConfiguration object and makes changes based on the state read
@@ -218,7 +221,7 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 		caBundle, err = ioutil.ReadFile(systemCAFile)
 		if err != nil {
 			log.Error(err, "unable to read file", "file", systemCAFile)
-			return reconcile.Result{}, err
+			return r.manageError(err, instance)
 		}
 		//log.Info("data read:", "data", string(caBundle))
 	}
@@ -227,13 +230,16 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
 			log.Error(err, "unable to retrive ca from secret", "secret", secretNamespacedName)
-			return reconcile.Result{}, err
+			return r.manageError(err, instance)
 		}
 	}
 	for i := range instance.Webhooks {
 		instance.Webhooks[i].ClientConfig.CABundle = caBundle
 	}
 	err = r.client.Update(context.TODO(), instance)
+	if err != nil {
+		return r.manageError(err, instance)
+	}
 	return reconcile.Result{}, err
 }
 
@@ -348,4 +354,12 @@ func (r *ReconcileValidatingWebhookConfiguration) getSecretCA(secretName string,
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
+}
+
+func (r *ReconcileValidatingWebhookConfiguration) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
+	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
+	return reconcile.Result{
+		RequeueAfter: time.Minute * 2,
+		Requeue:      true,
+	}, nil
 }
