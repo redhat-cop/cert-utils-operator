@@ -3,7 +3,7 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: vwc
   annotations:
-    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils-operator/test1
+    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
 webhooks:
 - name: validating.webhook.configuration
   rules:
@@ -26,7 +26,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: mwc
   annotations:
-    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils-operator/test1
+    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
 webhooks:
 - name: mutaing.webhook.configuration
   rules:
@@ -50,7 +50,7 @@ metadata:
   # name must match the spec fields below, and be in the form: <plural>.<group>
   name: crontabs.stable.example.com
   annotations:
-    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils-operator/test1  
+    cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1  
 spec:
   # group name to use for REST API: /apis/<group>/<version>
   group: stable.example.com
