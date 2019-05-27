@@ -1,22 +1,6 @@
 # instructions on how to manually test the olm integration
 
-To run the test type the following
-
-to build the catalog image
-
-```shell
-oc new-project cert-utils-operator-olm-test
-oc new-build --name=olm-test --binary=true --strategy=docker
-oc start-build olm-test --from-dir ./olm
-```
-
-to deploy the image:
-
-```shell
-oc apply -f ./olm/catalog-source.yaml
-```
-
-get the quay token
+Get the quay token
 
 ```shell
 AUTH_TOKEN=$(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '
