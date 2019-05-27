@@ -7,5 +7,5 @@ spec:
   type: appregistry
   endpoint: https://quay.io/cnr
   registryNamespace: raffaelespazzoli
-  displayName: "Cert-utils-operator"
-  publisher: "COP"
+  displayName: "cert-utils-operator"
+  publisher: "CoP"
