@@ -24,7 +24,7 @@ go to this [site](https://operatorhub.io/preview) to visually validate the resul
 push the catalog to the quay application registry
 
 ```shell
-operator-courier push olm/olm-catalog/ raffaelespazzoli cert-utils-operator 0.0.1 "${AUTH_TOKEN}"
+operator-courier push olm/olm-catalog/ <your-quay-repo> cert-utils-operator 0.0.1 "${AUTH_TOKEN}"
 ```
 
 deploy the operator source

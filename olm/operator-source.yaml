@@ -6,6 +6,6 @@ metadata:
 spec:
   type: appregistry
   endpoint: https://quay.io/cnr
-  registryNamespace: raffaelespazzoli
+  registryNamespace: <your-quay-repo>
   displayName: "cert-utils-operator"
   publisher: "CoP"
