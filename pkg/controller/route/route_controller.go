@@ -55,20 +55,35 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
-	isAnnotatedRoute := predicate.Funcs{
+	isAnnotatedAndSecureRoute := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			newRoute, ok := e.ObjectNew.(*routev1.Route)
+			if !ok || newRoute.Spec.TLS == nil || !(newRoute.Spec.TLS.Termination == "edge" || newRoute.Spec.TLS.Termination == "reencrypt") {
+				return false
+			}
 			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotation]
 			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotation]
 			return oldSecret != newSecret
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			_, ok := e.Meta.GetAnnotations()[certAnnotation]
+			route, ok := e.Object.(*routev1.Route)
+			if !ok || route.Spec.TLS == nil || !(route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt") {
+				return false
+			}
+			_, ok = e.Meta.GetAnnotations()[certAnnotation]
 			return ok
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
 		},
 	}
 
 	// Watch for changes to primary resource Route
-	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForObject{}, isAnnotatedRoute)
+	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForObject{}, isAnnotatedAndSecureRoute)
 	if err != nil {
 		return err
 	}
@@ -151,6 +166,9 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	if instance.Spec.TLS == nil {
+		return reconcile.Result{}, nil
+	}
 	secretName, ok := instance.GetAnnotations()[certAnnotation]
 	if !ok {
 		instance.Spec.TLS.Key = ""
@@ -192,7 +210,7 @@ func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route,
 	}
 	result := []routev1.Route{}
 	for _, route := range routeList.Items {
-		if secretName := route.GetAnnotations()[certAnnotation]; secretName == secret.Name {
+		if secretName := route.GetAnnotations()[certAnnotation]; secretName == secret.Name && route.Spec.TLS != nil {
 			result = append(result, route)
 		}
 	}
