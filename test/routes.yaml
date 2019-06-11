@@ -25,6 +25,17 @@ spec:
   to:
     kind: Service
     name: test
+---  
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    cert-utils-operator.redhat-cop.io/certs-from-secret: "test-ocp-secret"
+  name: test-route-no-tls
+spec:
+  to:
+    kind: Service
+    name: test    
 ---    
 apiVersion: route.openshift.io/v1
 kind: Route

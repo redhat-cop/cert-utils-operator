@@ -39,7 +39,7 @@ oc apply -f deploy
 
 This feature works on [secure routes](https://docs.openshift.com/container-platform/3.11/architecture/networking/routes.html#secured-routes) with `edge` or `reencrypt` type of termination.
 
-This feature is activated with the following annotation on a route: `cert-utils-operator.redhat-cop.io/certs-from-secret: "<secret-name>"`.
+This feature is activated with the following annotation on a route: `cert-utils-operator.redhat-cop.io/certs-from-secret: "<secret-name>"`. Routes that are not secured (`tls.termination` field initialized to either `edge` or `reencrypt`) will be ignored even if they have the annotation.
 
 The following fields of the route will be updated:
 
@@ -120,5 +120,7 @@ dep ensure
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
 ```shell
-operator-sdk up local --namespace ""
+operator-sdk up local --namespace "" --operator-flags "--systemCaFilename $(pwd)/README.md"
 ```
+
+replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.

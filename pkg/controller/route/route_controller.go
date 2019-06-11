@@ -55,20 +55,44 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
-	isAnnotatedRoute := predicate.Funcs{
+	isAnnotatedAndSecureRoute := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			log.Info("update called")
+			newRoute, ok := e.ObjectNew.(*routev1.Route)
+			if !ok || newRoute.Spec.TLS == nil || !(newRoute.Spec.TLS.Termination == "edge" || newRoute.Spec.TLS.Termination == "reencrypt") {
+				return false
+			}
 			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotation]
 			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotation]
 			return oldSecret != newSecret
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			_, ok := e.Meta.GetAnnotations()[certAnnotation]
+
+			route, ok := e.Object.(*routev1.Route)
+			log.Info("create called", "route", route.GetName())
+			//log.Info("", "route.Spec.TLS", route.Spec.TLS)
+			//log.Info("route.Spec.TLS", "route.Spec.TLS == nil", route.Spec.TLS == nil)
+			if !ok || route.Spec.TLS == nil || !(route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt") {
+				log.Info("returning false")
+				return false
+			}
+			_, ok = e.Meta.GetAnnotations()[certAnnotation]
+			log.Info("returning", "", ok)
 			return ok
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			log.Info("delete called")
+			return false
+		},
+
+		GenericFunc: func(e event.GenericEvent) bool {
+			log.Info("generic called")
+			return false
 		},
 	}
 
 	// Watch for changes to primary resource Route
-	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForObject{}, isAnnotatedRoute)
+	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForObject{}, isAnnotatedAndSecureRoute)
 	if err != nil {
 		return err
 	}
