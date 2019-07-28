@@ -57,16 +57,31 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
 	isAnnotatedAndSecureRoute := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			newRoute, ok := e.ObjectNew.(*routev1.Route)
+			newRoute, ok := e.ObjectNew.DeepCopyObject().(*routev1.Route)
 			if !ok || newRoute.Spec.TLS == nil || !(newRoute.Spec.TLS.Termination == "edge" || newRoute.Spec.TLS.Termination == "reencrypt") {
 				return false
 			}
 			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotation]
 			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotation]
-			return oldSecret != newSecret
+			if oldSecret != newSecret {
+				return true
+			}
+			oldRoute, _ := e.ObjectOld.DeepCopyObject().(*routev1.Route)
+			if newSecret != "" {
+				if newRoute.Spec.TLS.Key != oldRoute.Spec.TLS.Key {
+					return true
+				}
+				if newRoute.Spec.TLS.Certificate != oldRoute.Spec.TLS.Certificate {
+					return true
+				}
+				if newRoute.Spec.TLS.CACertificate != oldRoute.Spec.TLS.CACertificate {
+					return true
+				}
+			}
+			return false
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			route, ok := e.Object.(*routev1.Route)
+			route, ok := e.Object.DeepCopyObject().(*routev1.Route)
 			if !ok || route.Spec.TLS == nil || !(route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt") {
 				return false
 			}
@@ -170,11 +185,24 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, nil
 	}
 	secretName, ok := instance.GetAnnotations()[certAnnotation]
+	shouldUpdate := false
 	if !ok {
-		instance.Spec.TLS.Key = ""
-		instance.Spec.TLS.Certificate = ""
-		instance.Spec.TLS.CACertificate = ""
-		instance.Spec.TLS.DestinationCACertificate = ""
+		if instance.Spec.TLS.Key != "" {
+			instance.Spec.TLS.Key = ""
+			shouldUpdate = true
+		}
+		if instance.Spec.TLS.Certificate != "" {
+			instance.Spec.TLS.Certificate = ""
+			shouldUpdate = true
+		}
+		if instance.Spec.TLS.CACertificate != "" {
+			instance.Spec.TLS.CACertificate = ""
+			shouldUpdate = true
+		}
+		if instance.Spec.TLS.DestinationCACertificate != "" {
+			instance.Spec.TLS.DestinationCACertificate = ""
+			shouldUpdate = true
+		}
 	} else {
 		secret := &corev1.Secret{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{
@@ -185,12 +213,14 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 			log.Error(err, "unable to find referenced secret", "secret", secretName)
 			return r.manageError(err, instance)
 		}
-		populateRouteWithCertifcates(instance, secret)
+		shouldUpdate = shouldUpdate || populateRouteWithCertifcates(instance, secret)
 	}
-	err = r.client.Update(context.TODO(), instance)
-	if err != nil {
-		log.Error(err, "unable to update route", "route", instance)
-		return r.manageError(err, instance)
+	if shouldUpdate {
+		err = r.client.Update(context.TODO(), instance)
+		if err != nil {
+			log.Error(err, "unable to update route", "route", instance)
+			return r.manageError(err, instance)
+		}
 	}
 
 	// if we are here we know it's because a route was create/modified or its referenced secret was created/modified
@@ -260,25 +290,39 @@ func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q wo
 	return
 }
 
-func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) {
+func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) bool {
+	shouldUpdate := false
 	if route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt" {
 		// here we need to replace the terminating certifciate
 		if value, ok := secret.Data[util.Key]; ok && len(value) != 0 {
-			route.Spec.TLS.Key = string(value)
+			if route.Spec.TLS.Key != string(value) {
+				route.Spec.TLS.Key = string(value)
+				shouldUpdate = true
+			}
 		}
 		if value, ok := secret.Data[util.Cert]; ok && len(value) != 0 {
-			route.Spec.TLS.Certificate = string(value)
+			if route.Spec.TLS.Certificate != string(value) {
+				route.Spec.TLS.Certificate = string(value)
+				shouldUpdate = true
+			}
 		}
 		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
-			route.Spec.TLS.CACertificate = string(value)
+			if route.Spec.TLS.CACertificate != string(value) {
+				route.Spec.TLS.CACertificate = string(value)
+				shouldUpdate = true
+			}
 		}
 	}
 	if replace, _ := route.GetAnnotations()[replaceDestCAAnnotation]; replace == "true" {
 		// here we also need to replace the ca
 		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
-			route.Spec.TLS.DestinationCACertificate = string(value)
+			if route.Spec.TLS.DestinationCACertificate != string(value) {
+				route.Spec.TLS.DestinationCACertificate = string(value)
+				shouldUpdate = true
+			}
 		}
 	}
+	return shouldUpdate
 }
 
 func (r *ReconcileRoute) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {

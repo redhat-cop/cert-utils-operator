@@ -13,13 +13,13 @@ Initialize the CA and certificate needed during the tests
 ```shell
 oc new-project test-cert-utils
 oc apply -f ./test/cert-manager/setup.yaml
-oc apply -f ./testsample-cert.yaml
+oc apply -f ./test/sample-cert.yaml
 ```
 
 Test Routes
 
 ```shell
-oc apply -f ./testroutes.yaml
+oc apply -f ./test/routes.yaml
 ```
 
 Test ca-injection
