@@ -46,7 +46,12 @@ The following fields of the route will be updated:
 1. `key` with the content of `tls.key`.
 2. `certificate` with the content of `tls.crt`.
 3. `caCertificate` with the content of `ca.crt`.
-4. `destinationCACertificate` with the content of `ca.crt`. Only for `reencrypt` routes, if the optional annotation: `cert-utils-operator.redhat-cop.io/replace-dest-CA: "true"` is set.
+
+The `destinationCACertificate` can also be injected. To activate this feature use the following annotation: `cert-utils-operator.redhat-cop.io/destinationCA-from-secret: "<secret-name>"`. The following field will be updated:
+
+1. `destinationCACertificate` with the content of `ca.crt`.
+
+Note that the two annotations can point to different secrets.
 
 ## Creating java keystore and truststore
 
