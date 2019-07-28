@@ -150,7 +150,7 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 			select {
 			// watch for events
 			case fileEvent := <-watcher.Events:
-				log.Info("received event on file watcher channel", "event", fileEvent)
+				//log.Info("received event on file watcher channel", "event", fileEvent)
 				if fileEvent.Op&fsnotify.Write == fsnotify.Write {
 					// we received a change event on the file
 					events <- event.GenericEvent{}
