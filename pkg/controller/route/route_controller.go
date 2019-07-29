@@ -26,7 +26,7 @@ import (
 )
 
 const certAnnotation = util.AnnotationBase + "/certs-from-secret"
-const replaceDestCAAnnotation = util.AnnotationBase + "/replace-dest-CA"
+const destCAAnnotation = util.AnnotationBase + "/destinationCA-from-secret"
 
 var log = logf.Log.WithName("controller_route")
 
@@ -78,6 +78,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 					return true
 				}
 			}
+			oldCASecret, _ := e.MetaOld.GetAnnotations()[destCAAnnotation]
+			newCASecret, _ := e.MetaNew.GetAnnotations()[destCAAnnotation]
+			if newCASecret != oldCASecret {
+				return true
+			}
+			if newCASecret != "" {
+				if newRoute.Spec.TLS.DestinationCACertificate != oldRoute.Spec.TLS.DestinationCACertificate {
+					return true
+				}
+			}
 			return false
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -86,7 +96,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				return false
 			}
 			_, ok = e.Meta.GetAnnotations()[certAnnotation]
-			return ok
+			_, okca := e.Meta.GetAnnotations()[destCAAnnotation]
+			return ok || okca
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return false
@@ -185,6 +196,7 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, nil
 	}
 	secretName, ok := instance.GetAnnotations()[certAnnotation]
+	caSecretName, okca := instance.GetAnnotations()[destCAAnnotation]
 	shouldUpdate := false
 	if !ok {
 		if instance.Spec.TLS.Key != "" {
@@ -199,10 +211,7 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 			instance.Spec.TLS.CACertificate = ""
 			shouldUpdate = true
 		}
-		if instance.Spec.TLS.DestinationCACertificate != "" {
-			instance.Spec.TLS.DestinationCACertificate = ""
-			shouldUpdate = true
-		}
+
 	} else {
 		secret := &corev1.Secret{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{
@@ -215,6 +224,24 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 		shouldUpdate = shouldUpdate || populateRouteWithCertifcates(instance, secret)
 	}
+	if !okca {
+		if instance.Spec.TLS.DestinationCACertificate != "" {
+			instance.Spec.TLS.DestinationCACertificate = ""
+			shouldUpdate = true
+		}
+	} else {
+		secret := &corev1.Secret{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: instance.GetNamespace(),
+			Name:      caSecretName,
+		}, secret)
+		if err != nil {
+			log.Error(err, "unable to find referenced ca secret", "secret", secretName)
+			return r.manageError(err, instance)
+		}
+		shouldUpdate = shouldUpdate || populateRouteDestCA(instance, secret)
+	}
+
 	if shouldUpdate {
 		err = r.client.Update(context.TODO(), instance)
 		if err != nil {
@@ -313,13 +340,15 @@ func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) b
 			}
 		}
 	}
-	if replace, _ := route.GetAnnotations()[replaceDestCAAnnotation]; replace == "true" {
-		// here we also need to replace the ca
-		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
-			if route.Spec.TLS.DestinationCACertificate != string(value) {
-				route.Spec.TLS.DestinationCACertificate = string(value)
-				shouldUpdate = true
-			}
+	return shouldUpdate
+}
+
+func populateRouteDestCA(route *routev1.Route, secret *corev1.Secret) bool {
+	shouldUpdate := false
+	if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
+		if route.Spec.TLS.DestinationCACertificate != string(value) {
+			route.Spec.TLS.DestinationCACertificate = string(value)
+			shouldUpdate = true
 		}
 	}
 	return shouldUpdate
