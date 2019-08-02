@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cert-utils-operator
+  name: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
