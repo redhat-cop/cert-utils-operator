@@ -271,7 +271,7 @@ func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route,
 			result = append(result, route)
 			break
 		}
-		if secretName := route.GetAnnotations()[replaceDestCAAnnotation]; secretName == secret.Name && route.Spec.TLS != nil {
+		if secretName := route.GetAnnotations()[destCAAnnotation]; secretName == secret.Name && route.Spec.TLS != nil {
 			result = append(result, route)
 			break
 		}
