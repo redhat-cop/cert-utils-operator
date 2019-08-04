@@ -27,12 +27,8 @@ This is a cluster-level operator that you can deploy in any namespace, `cert-uti
 
 ```shell
 oc new-project cert-utils-operator
-```
-
-Deploy the cluster resources. Given that a number of elevated permissions are required to resources at a cluster scope the account you are currently logged in must have elevated rights.
-
-```shell
-oc apply -f deploy
+helm fetch https://github.com/redhat-cop/cert-utils-operator/raw/master/helm/cert-utils-operator-0.0.1.tgz
+helm template cert-utils-operator-0.0.1.tgz --namespace cert-utils-operator | oc apply -f - -n cert-utils-operator
 ```
 
 ## Populating route certificates
