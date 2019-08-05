@@ -5,7 +5,9 @@ REPOSITORY ?= $(REGISTRY)/redhat-cop/cert-utils-operator
 
 IMG := $(REPOSITORY):latest
 
-VERSION := v0.0.1
+TRAVIS_TAG ?= latest
+
+VERSION := TRAVIS_TAG
 
 BUILD_COMMIT := $(shell ./scripts/build/get-build-commit.sh)
 BUILD_TIMESTAMP := $(shell ./scripts/build/get-build-timestamp.sh)
@@ -58,19 +60,25 @@ docker-login:
 docker-tag-dev:
 	@docker tag $(IMG) $(REPOSITORY):dev
 
+#docker-tag-latest:
+#	@docker tag $(IMG) $(REPOSITORY):latest	
+
 # Tag for Dev
 docker-tag-release:
 	@docker tag $(IMG) $(REPOSITORY):$(VERSION)
-	@docker tag $(IMG) $(REPOSITORY):latest	
+#	@docker tag $(IMG) $(REPOSITORY):latest	
 
 # Push for Dev
 docker-push-dev:  docker-tag-dev
 	@docker push $(REPOSITORY):dev
 
+docker-push-latest:  docker-tag-latest
+	@docker push $(REPOSITORY):latest	
+
 # Push for Release
 docker-push-release:  docker-tag-release
 	@docker push $(REPOSITORY):$(VERSION)
-	@docker push $(REPOSITORY):latest
+#	@docker push $(REPOSITORY):latest
 
 # Build the docker image
 docker-build:
@@ -81,7 +89,7 @@ docker-push:
 	docker push ${IMG}
 
 # Travis Latest Tag Deployment
-travis-latest-deploy: docker-login docker-build docker-push
+travis-latest-deploy: docker-login docker-build docker-push-latest
 
 # Travis Dev Deployment
 travis-dev-deploy: docker-login docker-build docker-push-dev
