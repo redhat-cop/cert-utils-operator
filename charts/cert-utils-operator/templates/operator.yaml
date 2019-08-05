@@ -16,7 +16,7 @@ spec:
       serviceAccountName: cert-utils-operator
       containers:
         - name: cert-utils-operator
-          image: quay.io/redhat-cop/cert-utils-operator:latest
+          image: quay.io/redhat-cop/cert-utils-operator:{{ .Values.image_tag }}
           command:
           - cert-utils-operator
           imagePullPolicy: Always
