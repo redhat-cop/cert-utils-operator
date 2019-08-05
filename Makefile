@@ -13,11 +13,11 @@ BUILD_COMMIT := $(shell ./scripts/build/get-build-commit.sh)
 BUILD_TIMESTAMP := $(shell ./scripts/build/get-build-timestamp.sh)
 BUILD_HOSTNAME := $(shell ./scripts/build/get-build-hostname.sh)
 
-GITHUB_PAGES_DIR ?= /tmp/helm/publish
-GITHUB_PAGES_BRANCH ?= gh-pages
-GITHUB_PAGES_REPO ?= redhat-cop/cert-utils-operator
-HELM_CHARTS_SOURCE ?= charts
-HELM_CHART_DEST ?= $(GITHUB_PAGES_DIR)
+export GITHUB_PAGES_DIR ?= /tmp/helm/publish
+export GITHUB_PAGES_BRANCH ?= gh-pages
+export GITHUB_PAGES_REPO ?= redhat-cop/cert-utils-operator
+export HELM_CHARTS_SOURCE ?= charts
+export HELM_CHART_DEST ?= $(GITHUB_PAGES_DIR)
 
 LDFLAGS := "-X github.com/redhat-cop/cert-utils-operator/version.Version=$(VERSION) \
 	-X github.com/redhat-cop/cert-utils-operator/version.Vcs=$(BUILD_COMMIT) \
