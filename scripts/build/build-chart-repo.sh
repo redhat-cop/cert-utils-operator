@@ -8,4 +8,4 @@ find "$HELM_CHARTS_SOURCE" -mindepth 1 -maxdepth 1 -type d | while read chart; d
   helm package -d "$chart_name" "$chart"
 done
 echo '>>> helm repo index'
-helm repo index .
+helm repo index $HELM_CHART_DEST

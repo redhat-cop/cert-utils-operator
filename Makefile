@@ -7,11 +7,17 @@ IMG := $(REPOSITORY):latest
 
 TRAVIS_TAG ?= latest
 
-VERSION := TRAVIS_TAG
+VERSION := $(TRAVIS_TAG)
 
 BUILD_COMMIT := $(shell ./scripts/build/get-build-commit.sh)
 BUILD_TIMESTAMP := $(shell ./scripts/build/get-build-timestamp.sh)
 BUILD_HOSTNAME := $(shell ./scripts/build/get-build-hostname.sh)
+
+GITHUB_PAGES_DIR ?= /tmp/helm/publish
+GITHUB_PAGES_BRANCH ?= gh-pages
+GITHUB_PAGES_REPO ?= redhat-cop/cert-utils-operator
+HELM_CHARTS_SOURCE ?= charts
+HELM_CHART_DEST ?= $(GITHUB_PAGES_DIR)
 
 LDFLAGS := "-X github.com/redhat-cop/cert-utils-operator/version.Version=$(VERSION) \
 	-X github.com/redhat-cop/cert-utils-operator/version.Vcs=$(BUILD_COMMIT) \
@@ -88,6 +94,11 @@ docker-build:
 docker-push:
 	docker push ${IMG}
 
+publish-chart-repo:
+  ./scripts/build/checkout-rebase-pages.sh
+	./scripts/build/build-chart-repo.sh	
+	./scripts/build/push-to-pages.sh
+
 # Travis Latest Tag Deployment
 travis-latest-deploy: docker-login docker-build docker-push-latest
 
@@ -95,4 +106,4 @@ travis-latest-deploy: docker-login docker-build docker-push-latest
 travis-dev-deploy: docker-login docker-build docker-push-dev
 
 # Travis Release
-travis-release-deploy: docker-login docker-build docker-push-release
+travis-release-deploy: docker-login docker-build docker-push-release publish-chart-repo

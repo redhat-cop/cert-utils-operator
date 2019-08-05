@@ -1,6 +1,6 @@
-git config user.email "$CIRCLE_USERNAME@users.noreply.github.com"
-git config user.name CircleCI
-git add .
-git status
-git commit -m "Published by CircleCI $CIRCLE_BUILD_URL"
-git push origin "$GITHUB_PAGES_BRANCH"
+git -C $GITHUB_PAGES_DIR config user.email "$redhat-cop@users.noreply.github.com"
+git -C $GITHUB_PAGES_DIR config user.name $GIT_USERNAME
+git -C $GITHUB_PAGES_DIR add .
+git -C $GITHUB_PAGES_DIR status
+git -C $GITHUB_PAGES_DIR commit -m "Published by Travis"
+git -C $GITHUB_PAGES_DIR push origin "$GITHUB_PAGES_BRANCH"
