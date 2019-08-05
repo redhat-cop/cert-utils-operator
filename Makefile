@@ -66,8 +66,8 @@ docker-login:
 docker-tag-dev:
 	@docker tag $(IMG) $(REPOSITORY):dev
 
-#docker-tag-latest:
-#	@docker tag $(IMG) $(REPOSITORY):latest	
+docker-tag-latest:
+	@docker tag $(IMG) $(REPOSITORY):latest	
 
 # Tag for Dev
 docker-tag-release:
