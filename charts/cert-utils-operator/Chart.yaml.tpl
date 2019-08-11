@@ -1,7 +1,7 @@
 apiVersion: v1
 name: cert-utils-operator
-version: 0.0.1
-appVersion: 0.0.1
+version: ${version}
+appVersion: ${version}
 description: Helm chart that deploys cert-utils-operator
 keywords:
   - certificates
