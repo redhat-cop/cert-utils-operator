@@ -97,7 +97,7 @@ docker-push:
 publish-chart-repo:
 	./scripts/build/checkout-rebase-pages.sh 
 	./scripts/build/build-chart-repo.sh 
-	#./scripts/build/push-to-pages.sh 
+	./scripts/build/push-to-pages.sh 
 
 # Travis Latest Tag Deployment
 travis-latest-deploy: docker-login docker-build docker-push-latest
