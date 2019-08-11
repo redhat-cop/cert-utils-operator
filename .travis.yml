@@ -17,15 +17,15 @@ deploy:
     skip_cleanup: true
     script: make travis-latest-deploy
     on:
-      #repo: redhat-cop/cert-utils-operator
-      #branch: master
+      repo: redhat-cop/cert-utils-operator
+      branch: master
       tags: false
-      all_branches: true
+      #all_branches: true
   - provider: script
     skip_cleanup: true
     script: make travis-release-deploy
     on:
-      #repo: redhat-cop/cert-utils-operator
-      #branch: master
+      repo: redhat-cop/cert-utils-operator
+      branch: master
       tags: true
-      all_branches: true
+      #all_branches: true

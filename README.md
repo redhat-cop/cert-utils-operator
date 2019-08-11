@@ -58,11 +58,13 @@ When this annotation is set two more entries are added to the secret:
 1. `keystore.jks`: this Java keystore contains the `tls.crt` and `tls.key` certificate.
 2. `trustsstore.jks`: this Java keystore contains the `ca.crt` certificate.
 
+Note that Java Keystore require the key to be in [PKCS#8](https://en.wikipedia.org/wiki/PKCS_8) format. It is a responsibility of the certificate provisioner to make sure the key is in this format. No validation is currently performed by the cert-utils operator.
+
 A such annotated secret looks like the following:
 
 ![keystore](media/keystore.png)
 
-The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`.
+The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
 
 ## Showing info on the certificates
 
