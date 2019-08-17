@@ -7,6 +7,7 @@ env:
   - DEP_VERSION=0.5.0
 
 before_install:
+  - env
   - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then openssl aes-256-cbc -K $encrypted_fa8b1278af8d_key -iv $encrypted_fa8b1278af8d_iv -in github_deploy_key.enc -out github_deploy_key -d; fi
   - chmod 600 github_deploy_key
   - eval $(ssh-agent -s)
