@@ -24,11 +24,16 @@ All these feature are activated via opt-in annotations.
 ## Deploying the Operator
 
 This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
+Here are the instructions to install the latest release
 
 ```shell
 oc new-project cert-utils-operator
-helm fetch https://github.com/redhat-cop/cert-utils-operator/raw/master/helm/cert-utils-operator-0.0.1.tgz
-helm template cert-utils-operator-0.0.1.tgz --namespace cert-utils-operator | oc apply -f - -n cert-utils-operator
+helm repo add cert-utils-operator https://redhat-cop.github.io/cert-utils-operator
+helm repo update
+export cert_utils_chart_version=$(helm search cert-utils-operator/cert-utils-operator | grep cert-utils-operator/cert-utils-operator | awk '{print $2}')
+helm fetch cert-utils-operator/cert-utils-operator --version ${cert_utils_chart_version}
+helm template cert-utils-operator-${cert_utils_chart_version}.tgz --namespace cert-utils-operator | oc apply -f - -n cert-utils-operator
+rm cert-utils-operator-${cert_utils_chart_version}.tgz
 ```
 
 ## Populating route certificates

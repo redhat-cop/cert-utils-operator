@@ -7,10 +7,10 @@ env:
   - DEP_VERSION=0.5.0
 
 before_install:
-  - openssl aes-256-cbc -K $encrypted_fa8b1278af8d_key -iv $encrypted_fa8b1278af8d_iv -in github_deploy_key.enc -out github_deploy_key -d
-  - chmod 600 github_deploy_key
-  - eval $(ssh-agent -s)
-  - ssh-add github_deploy_key 
+  - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then openssl aes-256-cbc -K $encrypted_fa8b1278af8d_key -iv $encrypted_fa8b1278af8d_iv -in github_deploy_key.enc -out github_deploy_key -d; fi
+  - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then chmod 600 github_deploy_key; fi
+  - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then eval $(ssh-agent -s); fi
+  - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then ssh-add github_deploy_key; fi
   - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
   - chmod +x $GOPATH/bin/dep
   - travis_retry dep ensure
