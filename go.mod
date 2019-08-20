@@ -2,10 +2,11 @@ module github.com/redhat-cop/ciao
 
 require (
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
-	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b // indirect
+	github.com/fsnotify/fsnotify v1.4.7
+	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190820010559-640171cc31c8
-	github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible // indirect
+	github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible
 	github.com/redhat-cop/cert-utils-operator v0.0.2
 	github.com/spf13/pflag v1.0.3
 	k8s.io/api v0.0.0-20190612125737-db0771252981
