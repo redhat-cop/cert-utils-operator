@@ -119,10 +119,10 @@ This feature is activated by the following annotations:
 
 Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
 
-Clone the repository, then resolve all dependencies using `dep`:
+Ensure go modules are active by defining this environment variable:
 
 ```shell
-dep ensure
+export GO111MODULE=on
 ```
 
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
