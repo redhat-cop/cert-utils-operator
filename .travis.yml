@@ -2,10 +2,9 @@ sudo: required
 language: go
 go_import_path: github.com/redhat-cop/cert-utils-operator
 go:
-- "1.12"
-global: 
-  env:
-    - GO111MODULE=on
+- "1.12" 
+env:
+  - GO111MODULE=on
 
 before_install:
   - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then openssl aes-256-cbc -K $encrypted_fa8b1278af8d_key -iv $encrypted_fa8b1278af8d_iv -in github_deploy_key.enc -out github_deploy_key -d; fi
