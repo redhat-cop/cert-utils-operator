@@ -12,7 +12,7 @@ before_install:
   - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then eval $(ssh-agent -s); fi
   - if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then ssh-add github_deploy_key; fi
   - curl -LO https://git.io/get_helm.sh && chmod 700 get_helm.sh && ./get_helm.sh
-  - travis_retry go mod vendor
+  - travis_retry go mod download
 
 deploy:
   - provider: script
