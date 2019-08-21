@@ -1,4 +1,4 @@
-module github.com/redhat-cop/ciao
+module github.com/redhat-cop/cert-utils-operator
 
 require (
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
@@ -7,7 +7,6 @@ require (
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190820010559-640171cc31c8
 	github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible
-	github.com/redhat-cop/cert-utils-operator v0.0.2
 	github.com/spf13/pflag v1.0.3
 	k8s.io/api v0.0.0-20190612125737-db0771252981
 	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236

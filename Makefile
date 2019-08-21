@@ -32,11 +32,11 @@ native-test: generate fmt vet
 
 # Build manager binary
 manager: generate fmt vet
-	go build -o build/_output/bin/cert-utils-operator  -ldflags $(LDFLAGS) ./cmd/manager
+	go build -o build/_output/bin/cert-utils-operator  -ldflags $(LDFLAGS) github.com/redhat-cop/cert-utils-operator/cmd/manager
 
 # Build manager binary
 manager-osx: generate fmt vet
-	GOOS=darwin go build -o build/_output/bin/cert-utils-operator -ldflags $(LDFLAGS) ./cmd/manager
+	GOOS=darwin go build -o build/_output/bin/cert-utils-operator -ldflags $(LDFLAGS) github.com/redhat-cop/cert-utils-operator/cmd/manager
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
