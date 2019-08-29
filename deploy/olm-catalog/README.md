@@ -13,7 +13,7 @@ export community_fork=<a-fork-of-community-operator>
 
 I wasn't able to automate this set of steps, unfortunately.
 
-update the [`deploy/operator.yaml`](./deploy/operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
+update the [`deploy/operator.yaml`](../operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
 
 run the following:
 
