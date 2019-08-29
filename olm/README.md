@@ -1,6 +1,38 @@
-# instructions on how to manually test the olm integration
+# Operator Hub Release steps
 
-Get the quay token
+set some environment variables used during the process
+
+```shell
+export new_version=<new-version>
+export old_version=<old-version>
+export quay_test_repo=<quay-test-repo>
+export community_fork=<a-fork-of-community-operator>
+```
+
+## Create new CSV
+
+I wasn't able to automate this set of steps, unfortunately.
+
+update the [`deploy/operator.yaml`](./deploy/operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
+
+run the following:
+
+```shell
+operator-sdk olm-catalog gen-csv --csv-version $old_version --from-version $new_version
+```
+
+verify the created csv:
+
+```shell
+operator-courier --verbose verify deploy/olm-catalog/cert-utils-operator
+operator-courier --verbose verify --ui_validate_io deploy/olm-catalog/cert-utils-operator
+```
+
+## Test new CSV
+
+Test what the operator would look like in OperatorHub, by going to this [site](https://operatorhub.io/preview) and paste the csv/
+
+Test the operator deployment process from OperatorHub
 
 ```shell
 AUTH_TOKEN=$(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '
@@ -12,23 +44,29 @@ AUTH_TOKEN=$(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cn
 }' | jq -r '.token')
 ```
 
-validate the olm CSV
+Push the catalog to the quay application registry (this is different than a container registry).
 
 ```shell
-operator-courier verify olm/olm-catalog/
-operator-courier verify olm/olm-catalog/ --ui_validate_io
+operator-courier push deploy/olm-catalog/cert-utils-operator $quay_test_repo cert-utils-operator $new_version "${AUTH_TOKEN}"
 ```
 
-go to this [site](https://operatorhub.io/preview) to visually validate the result
-
-push the catalog to the quay application registry
+Deploy the operator source
 
 ```shell
-operator-courier push olm/olm-catalog/ <your-quay-repo> cert-utils-operator 0.0.1 "${AUTH_TOKEN}"
+envsubst < deploy/olm-catalog/operator-source.yaml | oc apply -f -
 ```
 
-deploy the operator source
+Now you should see the operator in the operator catalog, follow the normal installation process from here.
+
+## Pushing the new CSV to OperatorHub
 
 ```shell
-oc apply -f ./olm/operator-source.yaml
+git -C /tmp clone https://github.com/operator-framework/community-operators
+git -C /tmp/community-operators remote add tmp https://github.com/${community_fork}/community-operators
+git -C /tmp/community-operators checkout -b cert-utils-operator-${new_version}
+operator-courier flatten deploy/olm-catalog/cert-utils-operator /tmp/community-operators/cert-utils-operator
+git -C /tmp/community-operators add .
+git -C /tmp/community-operators commit -m "cert-utils-operator release ${new_version}"
+git -C /tmp/community-operators push tmp
+hub -C /tmp/community-operators pull-request -m "cert-utils-operator release ${new_version}"
 ```
