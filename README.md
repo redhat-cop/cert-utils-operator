@@ -132,3 +132,14 @@ operator-sdk up local --namespace "" --operator-flags "--systemCaFilename $(pwd)
 ```
 
 replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.
+
+## Release Process
+
+To release execute the following:
+
+```shell
+git tag -a "<version>" -m "release <version>"
+git push upstream <version>
+```
+
+use this version format: vM.m.z
