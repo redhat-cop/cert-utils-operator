@@ -13,7 +13,7 @@ export community_fork=<a-fork-of-community-operator>
 
 I wasn't able to automate this set of steps, unfortunately.
 
-update the [`deploy/operator.yaml`](../operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
+update the [`deploy/operator.yaml`](./deploy/operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
 
 run the following:
 
@@ -64,7 +64,7 @@ Now you should see the operator in the operator catalog, follow the normal insta
 git -C /tmp clone https://github.com/operator-framework/community-operators
 git -C /tmp/community-operators remote add tmp https://github.com/${community_fork}/community-operators
 git -C /tmp/community-operators checkout -b cert-utils-operator-${new_version}
-operator-courier flatten deploy/olm-catalog/cert-utils-operator /tmp/community-operators/cert-utils-operator
+operator-courier flatten deploy/olm-catalog/cert-utils-operator /tmp/community-operators/community-operators/cert-utils-operator
 git -C /tmp/community-operators add .
 git -C /tmp/community-operators commit -m "cert-utils-operator release ${new_version}"
 git -C /tmp/community-operators push tmp
