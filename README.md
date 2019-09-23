@@ -17,7 +17,7 @@ The functionalities are the following:
 2. [Ability to create java keystore and truststore from the certificates](#Creating-java-keystore-and-truststore)
 3. [Ability to show info regarding the certificates](#Showing-info-on-the-certificates)
 4. [Ability to alert when a certificate is about to expire](#Alerting-when-a-certificate-is-about-to-expire)
-5. [Ability to inject ca bundles in ValidatingWebhookConfiguration, MutatingWebhookConfiguration, CustomResourceDefinition object](#CA-injection)
+5. [Ability to inject ca bundles in Secrets, ConfigMaps, ValidatingWebhookConfiguration, MutatingWebhookConfiguration and CustomResourceDefinition objects](#CA-injection)
 
 All these feature are activated via opt-in annotations.
 
