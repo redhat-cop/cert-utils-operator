@@ -33,6 +33,7 @@ replace (
 	k8s.io/kube-state-metrics => k8s.io/kube-state-metrics v1.6.0
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.1.11-0.20190411181648-9d55346c2bde
+	replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
 )
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.0
