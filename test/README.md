@@ -26,4 +26,5 @@ Test ca-injection
 
 ```shell
 oc apply -f ./test/webhookconfiguration.yaml
+oc apply -f ./test/ca_injection_in_secret_configmap.yaml
 ```

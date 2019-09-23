@@ -106,7 +106,7 @@ Here is an example of a certificate soon-to-expiry event:
 
 ## CA Injection
 
-[ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) and [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. I order to do so over an encrypted connection a CA bundle needs to be configured. In these objects the cA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
+[ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) and [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. I order to do so over an encrypted connection a CA bundle needs to be configured. In these objects the CA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
 This feature allows you to inject the ca bundle from either a `kubernetes.io/tls` secret or from the service_ca.crt file mounted in every pod. The latter is useful if you are protecting your webhook with a certificate generated with the [service service certificate secret](https://docs.openshift.com/container-platform/3.11/dev_guide/secrets.html#service-serving-certificate-secrets) feature.
 
 This feature is activated by the following annotations:
@@ -114,6 +114,38 @@ This feature is activated by the following annotations:
 1. `cert-utils-operator.redhat-cop.io/injectca-from-secret: <secret namespace>/<secret name>`
 
 2. `cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"`
+
+In addition to those objects, it is also possible to inject ca bundles from secrets to secrets and configmaps:
+
+1. `secrets`: the secret must of type: `kubernetes.io/tls`. These types of secret must contain the `tls.crt` and `tls.key` keys, but is this case those keys are going to be presumably empty. So it is recommended to create these secrets as follows:
+  
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    annotations:
+      cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
+    name: test-inject-ca
+    namespace: test-cert-utils
+  type: kubernetes.io/tls
+  stringData:
+    tls.crt: ""
+    tls.key: ""
+  ```
+
+2. `confimaps`: the ca bundle will be injected in this key `ca.crt`, here is an example:
+
+  ```yaml
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    annotations:
+      cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
+    name: test-inject-ca-cm
+    namespace: test-cert-utils
+  ```
+
+[Projected volumes](https://kubernetes.io/docs/concepts/storage/volumes/#projected) can be use dto merge the caBundle with other pieces of configuration and or change the key name.
 
 ## Local Development
 
@@ -128,7 +160,7 @@ export GO111MODULE=on
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
 ```shell
-operator-sdk up local --namespace "" --operator-flags "--systemCaFilename $(pwd)/README.md"
+OPERATOR_NAME="cert-utils-operator" operator-sdk up local --operator-flags "--systemCaFilename $(pwd)/README.md"
 ```
 
 replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.
