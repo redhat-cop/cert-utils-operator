@@ -9,6 +9,7 @@ rules:
   resources:
   - events
   - secrets
+  - configmaps
   verbs:
   - "*"
 # Operator Business Logic

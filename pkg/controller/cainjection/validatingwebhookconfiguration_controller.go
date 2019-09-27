@@ -59,6 +59,14 @@ func Add(mgr manager.Manager) error {
 	if err != nil {
 		return err
 	}
+	err = addSecretReconciler(mgr, newSecretReconciler(mgr))
+	if err != nil {
+		return err
+	}
+	err = addConfigmapReconciler(mgr, newConfigmapReconciler(mgr))
+	if err != nil {
+		return err
+	}
 	return addValidating(mgr, newValidatingReconciler(mgr))
 }
 
