@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: |
       []
-    capabilities: Full Lifecycle
+    capabilities: Deep Insights
     categories: Security
     certified: "false"
     containerImage: quay.io/redhat-cop/cert-utils-operator:latest
