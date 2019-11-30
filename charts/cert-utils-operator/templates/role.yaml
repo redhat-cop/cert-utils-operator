@@ -52,6 +52,7 @@ rules:
   - ""
   resources:
   - services
+  - services/finalizers
   verbs:
   - "*"
 #Metrics  
