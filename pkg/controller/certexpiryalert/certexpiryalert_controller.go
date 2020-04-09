@@ -53,7 +53,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCertExpiryAlert{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("certexpiryalert-controller")}
+	return &ReconcileCertExpiryAlert{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("certexpiryalert-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

@@ -32,7 +32,7 @@ import (
  */
 // newReconciler returns a new reconcile.Reconciler
 func newMutatingReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileMutatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("mutatingwebhookconfiguration-controller")}
+	return &ReconcileMutatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("mutatingwebhookconfiguration-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -212,7 +212,7 @@ func (r *ReconcileMutatingWebhookConfiguration) Reconcile(request reconcile.Requ
 
 func matchSecretWithMutatingWebhooks(c client.Client, secret types.NamespacedName) ([]admissionregistrationv1beta1.MutatingWebhookConfiguration, error) {
 	mutatingWebHookList := &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, mutatingWebHookList)
+	err := c.List(context.TODO(), mutatingWebHookList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list mutatingWebhookConfiguration for this namespace: ")
 		return []admissionregistrationv1beta1.MutatingWebhookConfiguration{}, err
@@ -228,7 +228,7 @@ func matchSecretWithMutatingWebhooks(c client.Client, secret types.NamespacedNam
 
 func matchSystemCAWithMutatingWebhooks(c client.Client) ([]admissionregistrationv1beta1.MutatingWebhookConfiguration, error) {
 	mutatingWebHookList := &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, mutatingWebHookList)
+	err := c.List(context.TODO(), mutatingWebHookList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list mutatingWebhookConfiguration for all namespaces")
 		return []admissionregistrationv1beta1.MutatingWebhookConfiguration{}, err

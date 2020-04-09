@@ -15,10 +15,16 @@ I wasn't able to automate this set of steps, unfortunately.
 
 update the [`deploy/operator.yaml`](./deploy/operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
 
-run the following:
+If you creating the csv for the first time run the following:
 
 ```shell
-operator-sdk olm-catalog gen-csv --csv-version $old_version --from-version $new_version
+operator-sdk olm-catalog gen-csv --csv-version $new_version --csv-channel alpha --default-channel
+```
+
+If you are updating run the following:
+
+```shell
+operator-sdk olm-catalog gen-csv --csv-version $new_version --from-version $old_version --update-crds
 ```
 
 verify the created csv:
@@ -47,7 +53,7 @@ AUTH_TOKEN=$(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cn
 Push the catalog to the quay application registry (this is different than a container registry).
 
 ```shell
-operator-courier push deploy/olm-catalog/cert-utils-operator $quay_test_repo cert-utils-operator $new_version "${AUTH_TOKEN}"
+operator-courier push deploy/olm-catalog/cert-utils-operator $quay_test_repo cert-utils-operator-package $new_version "${AUTH_TOKEN}"
 ```
 
 Deploy the operator source
@@ -64,9 +70,17 @@ Now you should see the operator in the operator catalog, follow the normal insta
 git -C /tmp clone https://github.com/operator-framework/community-operators
 git -C /tmp/community-operators remote add tmp https://github.com/${community_fork}/community-operators
 git -C /tmp/community-operators checkout -b cert-utils-operator-${new_version}
-operator-courier flatten deploy/olm-catalog/cert-utils-operator /tmp/community-operators/community-operators/cert-utils-operator
+rm -rf /tmp/community-operators/community-operators/cert-utils-operator/*
+mkdir -p /tmp/community-operators/community-operators/cert-utils-operator
+cp -R deploy/olm-catalog/cert-utils-operator/* /tmp/community-operators/community-operators/cert-utils-operator
 git -C /tmp/community-operators add .
-git -C /tmp/community-operators commit -m "cert-utils-operator release ${new_version}"
+git -C /tmp/community-operators commit -m "cert-utils-operator release ${new_version}" -s
+# TODO push in a way that overwrites whatever exist
 git -C /tmp/community-operators push tmp
-hub -C /tmp/community-operators pull-request -m "cert-utils-operator release ${new_version}"
+# TODO create the PR only it does not exist already
+# TODO automate which first time/update
+# if first time
+hub -C /tmp/community-operators pull-request -F ./deploy/olm-catalog/pr-message-initial-commit.md
+# else
+hub -C /tmp/community-operators pull-request -F ./deploy/olm-catalog/pr-message-new-version.md
 ```

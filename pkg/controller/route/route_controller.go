@@ -43,7 +43,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileRoute{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("route-controller")}
+	return &ReconcileRoute{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("route-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -258,9 +258,9 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 
 func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route, error) {
 	routeList := &routev1.RouteList{}
-	err := c.List(context.TODO(), &client.ListOptions{
+	err := c.List(context.TODO(), routeList, &client.ListOptions{
 		Namespace: secret.Namespace,
-	}, routeList)
+	})
 	if err != nil {
 		log.Error(err, "unable to list routes for this namespace: ", "namespace", secret.Namespace)
 		return []routev1.Route{}, err
