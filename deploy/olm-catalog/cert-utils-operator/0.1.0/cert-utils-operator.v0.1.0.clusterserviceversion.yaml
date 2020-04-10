@@ -50,6 +50,7 @@ spec:
           resources:
           - events
           - secrets
+          - configmaps
           verbs:
           - '*'
         - apiGroups:
