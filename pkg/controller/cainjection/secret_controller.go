@@ -29,7 +29,7 @@ import (
  */
 // newReconciler returns a new reconcile.Reconciler
 func newSecretReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSecret{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("secret-ca-injection-controller")}
+	return &ReconcileSecret{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("secret-ca-injection-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -172,7 +172,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 
 func matchSecretWithSecret(c client.Client, secret types.NamespacedName) ([]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, secretList)
+	err := c.List(context.TODO(), secretList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list secret for this namespace: ", "namespace", secret.Namespace)
 		return []corev1.Secret{}, err

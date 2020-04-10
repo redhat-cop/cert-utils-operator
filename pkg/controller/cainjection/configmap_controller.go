@@ -29,7 +29,7 @@ import (
  */
 // newReconciler returns a new reconcile.Reconciler
 func newConfigmapReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileConfigmap{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("configmap-ca-injection-controller")}
+	return &ReconcileConfigmap{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("configmap-ca-injection-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -154,7 +154,7 @@ func (r *ReconcileConfigmap) Reconcile(request reconcile.Request) (reconcile.Res
 
 func matchSecretWithConfigmaps(c client.Client, secret types.NamespacedName) ([]corev1.ConfigMap, error) {
 	configmapList := &corev1.ConfigMapList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, configmapList)
+	err := c.List(context.TODO(), configmapList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list secret for this namespace: ", "namespace", secret.Namespace)
 		return []corev1.ConfigMap{}, err

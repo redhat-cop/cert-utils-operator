@@ -32,7 +32,7 @@ import (
  */
 // newReconciler returns a new reconcile.Reconciler
 func newCRDReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCRD{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("crd-controller")}
+	return &ReconcileCRD{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("crd-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -217,7 +217,7 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 func matchSecretWithCRD(c client.Client, secret types.NamespacedName) ([]crd.CustomResourceDefinition, error) {
 	CRDList := &crd.CustomResourceDefinitionList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, CRDList)
+	err := c.List(context.TODO(), CRDList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list mutatingWebhookConfiguration for this namespace: ", "namespace", secret.Namespace)
 		return []crd.CustomResourceDefinition{}, err
@@ -233,7 +233,7 @@ func matchSecretWithCRD(c client.Client, secret types.NamespacedName) ([]crd.Cus
 
 func matchSystemCAWithCRD(c client.Client) ([]crd.CustomResourceDefinition, error) {
 	CRDList := &crd.CustomResourceDefinitionList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, CRDList)
+	err := c.List(context.TODO(), CRDList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list mutatingWebhookConfiguration for all namespaces")
 		return []crd.CustomResourceDefinition{}, err

@@ -72,7 +72,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newValidatingReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileValidatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("validatingwebhookconfiguration-controller")}
+	return &ReconcileValidatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("validatingwebhookconfiguration-controller")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -253,7 +253,7 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 
 func matchSecretWithValidatingWebhooks(c client.Client, secret types.NamespacedName) ([]admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	validatingWebHookList := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, validatingWebHookList)
+	err := c.List(context.TODO(), validatingWebHookList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list ValidatingWebhookConfiguration for this namespace: ")
 		return []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}, err
@@ -269,7 +269,7 @@ func matchSecretWithValidatingWebhooks(c client.Client, secret types.NamespacedN
 
 func matchSystemCAWithValidatingWebhooks(c client.Client) ([]admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	validatingWebHookList := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), &client.ListOptions{}, validatingWebHookList)
+	err := c.List(context.TODO(), validatingWebHookList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list ValidatingWebhookConfiguration for all namespaces")
 		return []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}, err
