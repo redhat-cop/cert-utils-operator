@@ -30,7 +30,7 @@ Here are the instructions to install the latest release
 oc new-project cert-utils-operator
 helm repo add cert-utils-operator https://redhat-cop.github.io/cert-utils-operator
 helm repo update
-export cert_utils_chart_version=$(helm search cert-utils-operator/cert-utils-operator | grep cert-utils-operator/cert-utils-operator | awk '{print $2}')
+export cert_utils_chart_version=$(helm search repo cert-utils-operator/cert-utils-operator | grep cert-utils-operator/cert-utils-operator | awk '{print $2}')
 helm fetch cert-utils-operator/cert-utils-operator --version ${cert_utils_chart_version}
 helm template cert-utils-operator-${cert_utils_chart_version}.tgz --namespace cert-utils-operator | oc apply -f - -n cert-utils-operator
 rm cert-utils-operator-${cert_utils_chart_version}.tgz
