@@ -6,16 +6,15 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -34,6 +33,7 @@ func init() {
 	flag.StringVar(&systemCAFile, "systemCaFilename", "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt", "file where the system ca can be found")
 }
 
+const controllerNamewca = "webhook_ca_injection_controller"
 const certAnnotationSecret = util.AnnotationBase + "/injectca-from-secret"
 const certAnnotationServiceCA = util.AnnotationBase + "/injectca-from-service_ca"
 
@@ -41,7 +41,7 @@ const certAnnotationServiceCA = util.AnnotationBase + "/injectca-from-service_ca
 const secretInjection = "Secret"
 const systemCAInjection = "System"
 
-var log = logf.Log.WithName("controller_ca_injection")
+var log = logf.Log.WithName("ca_injection_controller")
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -72,13 +72,15 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newValidatingReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileValidatingWebhookConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("validatingwebhookconfiguration-controller")}
+	return &ReconcileValidatingWebhookConfiguration{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerNamewca)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("validatingwebhookconfiguration-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerNamewca, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -99,7 +101,11 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ValidatingWebhookConfiguration
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, isAnnotatedValidatingWebhookConfiguration)
+	err = c.Watch(&source.Kind{Type: &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+		TypeMeta: v1.TypeMeta{
+			Kind: "ValidatingWebhookConfiguration",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedValidatingWebhookConfiguration)
 	if err != nil {
 		return err
 	}
@@ -133,7 +139,11 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner ValidatingWebhookConfiguration
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecingValidatingWebHooks{
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "secret",
+		},
+	}}, &enqueueRequestForReferecingValidatingWebHooks{
 		Client:        mgr.GetClient(),
 		InjectionType: secretInjection,
 	}, isContentChanged)
@@ -192,9 +202,7 @@ var _ reconcile.Reconciler = &ReconcileValidatingWebhookConfiguration{}
 type ReconcileValidatingWebhookConfiguration struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a ValidatingWebhookConfiguration object and makes changes based on the state read
@@ -210,7 +218,7 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 
 	// Fetch the ValidatingWebhookConfiguration instance
 	instance := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -229,7 +237,7 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 		caBundle, err = ioutil.ReadFile(systemCAFile)
 		if err != nil {
 			log.Error(err, "unable to read file", "file", systemCAFile)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 		//log.Info("data read:", "data", string(caBundle))
 	}
@@ -238,17 +246,17 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
 			log.Error(err, "unable to retrive ca from secret", "secret", secretNamespacedName)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 	}
 	for i := range instance.Webhooks {
 		instance.Webhooks[i].ClientConfig.CABundle = caBundle
 	}
-	err = r.client.Update(context.TODO(), instance)
+	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
-		return r.manageError(err, instance)
+		return r.ManageError(instance, err)
 	}
-	return reconcile.Result{}, err
+	return r.ManageSuccess(instance)
 }
 
 func matchSecretWithValidatingWebhooks(c client.Client, secret types.NamespacedName) ([]admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
@@ -353,7 +361,7 @@ func (e *enqueueRequestForReferecingValidatingWebHooks) Generic(evt event.Generi
 
 func (r *ReconcileValidatingWebhookConfiguration) getSecretCA(secretName string, secretNamespace string) ([]byte, error) {
 	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{
 		Namespace: secretNamespace,
 		Name:      secretName,
 	}, secret)
@@ -362,12 +370,4 @@ func (r *ReconcileValidatingWebhookConfiguration) getSecretCA(secretName string,
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
-}
-
-func (r *ReconcileValidatingWebhookConfiguration) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }

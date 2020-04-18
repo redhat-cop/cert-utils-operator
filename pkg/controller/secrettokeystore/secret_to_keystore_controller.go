@@ -12,11 +12,10 @@ import (
 
 	keystore "github.com/pavel-v-chernykh/keystore-go"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -27,7 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_secret_to_keystore")
+const controllerName = "secret_to_keystore_controller"
+
+var log = logf.Log.WithName(controllerName)
 
 const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
@@ -48,13 +49,15 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSecret{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("secret-to-keystore-controller")}
+	return &ReconcileSecret{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerName)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("secret-to-keystore-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -99,7 +102,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Secret
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Secret",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
 	if err != nil {
 		return err
 	}
@@ -113,9 +120,7 @@ var _ reconcile.Reconciler = &ReconcileSecret{}
 type ReconcileSecret struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a Secret object and makes changes based on the state read
@@ -131,7 +136,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 
 	// Fetch the Secret instance
 	instance := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -167,13 +172,13 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		delete(instance.Data, truststoreName)
 	}
 
-	err = r.client.Update(context.TODO(), instance)
+	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, "unable to update secrer", "secret", instance.GetName())
-		return r.manageError(err, instance)
+		return r.ManageError(instance, err)
 	}
 
-	return reconcile.Result{}, nil
+	return r.ManageSuccess(instance)
 }
 
 func getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
@@ -249,12 +254,4 @@ func getPassword(secret *corev1.Secret) string {
 		return pwd
 	}
 	return defaultpassword
-}
-
-func (r *ReconcileSecret) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }

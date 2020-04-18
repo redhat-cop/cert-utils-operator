@@ -160,7 +160,7 @@ export GO111MODULE=on
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
 ```shell
-OPERATOR_NAME="cert-utils-operator" operator-sdk run --local --operator-flags "--systemCaFilename $(pwd)/README.md" --namespace=""
+OPERATOR_NAME="cert-utils-operator" operator-sdk run --local --operator-flags "--systemCaFilename $(pwd)/README.md --zap-level=debug" --watch-namespace=""
 ```
 
 replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.

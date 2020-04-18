@@ -3,15 +3,15 @@ package cainjection
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"strings"
-	"time"
 
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -23,62 +23,85 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const controllerNamecm = "configmap-ca-injection-controller"
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
 // newReconciler returns a new reconcile.Reconciler
 func newConfigmapReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileConfigmap{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("configmap-ca-injection-controller")}
+	return &ReconcileConfigmap{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerNamecm)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func addConfigmapReconciler(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("configmap-ca-injection-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerNamecm, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	isAnnotatedSecret := predicate.Funcs{
+	isAnnotatedConfigMap := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotationSecret]
 			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotationSecret]
+			log.V(1).Info("update func", "config map", e.MetaNew.GetName(), "annotation old", oldSecret, "annotation new", newSecret)
 			return oldSecret != newSecret
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			_, ok1 := e.Meta.GetAnnotations()[certAnnotationSecret]
+			log.V(1).Info("create func", "config map", e.Meta.GetName(), "has annotation", ok1)
 			return ok1
 		},
 	}
 
 	// Watch for changes to primary resource CRD
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
+	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{
+		TypeMeta: v1.TypeMeta{
+			Kind: "ConfigMap",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedConfigMap)
 	if err != nil {
 		return err
 	}
 
 	isContentChanged := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			_, ok := e.ObjectNew.(*corev1.ConfigMap)
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
 			if !ok {
+				return false
+			}
+			newSecret, ok := e.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			if newSecret.Type != util.TLSSecret {
+				return false
+			}
+			return !reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA])
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			if secret.Type != util.TLSSecret {
 				return false
 			}
 			return true
-		},
-		CreateFunc: func(e event.CreateEvent) bool {
-			_, ok := e.Object.(*corev1.ConfigMap)
-			if !ok {
-				return false
-			}
-			_, ok1 := e.Meta.GetAnnotations()[certAnnotationSecret]
-			return ok1
 		},
 	}
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner ValidatingWebhookConfiguration
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecingConfigmaps{
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "secret",
+		},
+	}}, &enqueueRequestForReferecingConfigmaps{
 		Client: mgr.GetClient(),
 	}, isContentChanged)
 	if err != nil {
@@ -94,9 +117,7 @@ var _ reconcile.Reconciler = &ReconcileSecret{}
 type ReconcileConfigmap struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a mutatingWebhookConfiguration object and makes changes based on the state read
@@ -112,7 +133,7 @@ func (r *ReconcileConfigmap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// Fetch the mutatingWebhookConfiguration instance
 	instance := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -131,7 +152,7 @@ func (r *ReconcileConfigmap) Reconcile(request reconcile.Request) (reconcile.Res
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
 			log.Error(err, "unable to retrive ca from secret", "secret", secretNamespacedName)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 	}
 	if len(caBundle) == 0 {
@@ -143,13 +164,13 @@ func (r *ReconcileConfigmap) Reconcile(request reconcile.Request) (reconcile.Res
 		buffer := bytes.NewBuffer(caBundle)
 		instance.Data[util.CA] = buffer.String()
 	}
-	err = r.client.Update(context.TODO(), instance)
+	err = r.GetClient().Update(context.TODO(), instance)
 
 	if err != nil {
-		return r.manageError(err, instance)
+		return r.ManageError(instance, err)
 	}
 
-	return reconcile.Result{}, err
+	return r.ManageSuccess(instance)
 }
 
 func matchSecretWithConfigmaps(c client.Client, secret types.NamespacedName) ([]corev1.ConfigMap, error) {
@@ -222,7 +243,7 @@ func (e *enqueueRequestForReferecingConfigmaps) Generic(evt event.GenericEvent, 
 
 func (r *ReconcileConfigmap) getSecretCA(secretName string, secretNamespace string) ([]byte, error) {
 	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{
 		Namespace: secretNamespace,
 		Name:      secretName,
 	}, secret)
@@ -231,12 +252,4 @@ func (r *ReconcileConfigmap) getSecretCA(secretName string, secretNamespace stri
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
-}
-
-func (r *ReconcileConfigmap) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }

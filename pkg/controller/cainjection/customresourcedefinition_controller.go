@@ -5,16 +5,15 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -26,19 +25,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const controllerNamecrd = "crd_controller"
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
 // newReconciler returns a new reconcile.Reconciler
 func newCRDReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCRD{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("crd-controller")}
+	return &ReconcileCRD{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerNamecrd)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func addCRD(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("crd-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerNamecrd, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -59,7 +62,11 @@ func addCRD(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CRD
-	err = c.Watch(&source.Kind{Type: &crd.CustomResourceDefinition{}}, &handler.EnqueueRequestForObject{}, isAnnotatedCRD)
+	err = c.Watch(&source.Kind{Type: &crd.CustomResourceDefinition{
+		TypeMeta: v1.TypeMeta{
+			Kind: "CustomResourceDefinition",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedCRD)
 	if err != nil {
 		return err
 	}
@@ -93,7 +100,11 @@ func addCRD(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner ValidatingWebhookConfiguration
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecingCRDs{
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Secret",
+		},
+	}}, &enqueueRequestForReferecingCRDs{
 		Client:        mgr.GetClient(),
 		InjectionType: secretInjection,
 	}, isContentChanged)
@@ -152,9 +163,7 @@ var _ reconcile.Reconciler = &ReconcileCRD{}
 type ReconcileCRD struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a mutatingWebhookConfiguration object and makes changes based on the state read
@@ -170,7 +179,7 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	// Fetch the mutatingWebhookConfiguration instance
 	instance := &crd.CustomResourceDefinition{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -189,7 +198,7 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 		caBundle, err = ioutil.ReadFile(systemCAFile)
 		if err != nil {
 			log.Error(err, "unable to read file", "file", systemCAFile)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 	}
 	if secretNamespacedName, ok := instance.GetAnnotations()[certAnnotationSecret]; ok {
@@ -197,22 +206,22 @@ func (r *ReconcileCRD) Reconcile(request reconcile.Request) (reconcile.Result, e
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
 			log.Error(err, "unable to retrive ca from secret", "secret", secretNamespacedName)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 	}
 
 	//we update only if the fields are initialized
 	if instance.Spec.Conversion != nil {
-		if instance.Spec.Conversion.WebhookClientConfig != nil {
-			instance.Spec.Conversion.WebhookClientConfig.CABundle = caBundle
-			err = r.client.Update(context.TODO(), instance)
+		if instance.Spec.Conversion.Webhook != nil {
+			instance.Spec.Conversion.Webhook.ClientConfig.CABundle = caBundle
+			err = r.GetClient().Update(context.TODO(), instance)
 		}
 	}
 	if err != nil {
-		return r.manageError(err, instance)
+		return r.ManageError(instance, err)
 	}
 
-	return reconcile.Result{}, err
+	return r.ManageSuccess(instance)
 }
 
 func matchSecretWithCRD(c client.Client, secret types.NamespacedName) ([]crd.CustomResourceDefinition, error) {
@@ -317,7 +326,7 @@ func (e *enqueueRequestForReferecingCRDs) Generic(evt event.GenericEvent, q work
 
 func (r *ReconcileCRD) getSecretCA(secretName string, secretNamespace string) ([]byte, error) {
 	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{
 		Namespace: secretNamespace,
 		Name:      secretName,
 	}, secret)
@@ -326,12 +335,4 @@ func (r *ReconcileCRD) getSecretCA(secretName string, secretNamespace string) ([
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
-}
-
-func (r *ReconcileCRD) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }
