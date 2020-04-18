@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+	errs "errors"
 	"reflect"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -52,6 +54,18 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	c, err := controller.New("route-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
+	}
+
+	reconcileRoute, ok := r.(*ReconcileRoute)
+	if !ok {
+		return errs.New("unable to convert to ReconcileRoute")
+	}
+	if !reconcileRoute.IsAPIResourceAvailable(schema.GroupVersionKind{
+		Group:   "openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	}) {
+		return nil
 	}
 
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
