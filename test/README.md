@@ -4,15 +4,14 @@ Deploy cert-manager:
 
 ```shell
 oc create namespace cert-manager
-oc label namespace cert-manager certmanager.k8s.io/disable-validation=true
-oc apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.8.0/cert-manager-openshift.yaml
+oc apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.14.1/cert-manager.yaml
+oc apply -f ./test/cert-manager/setup.yaml
 ```
 
 Initialize the CA and certificate needed during the tests
 
 ```shell
 oc new-project test-cert-utils
-oc apply -f ./test/cert-manager/setup.yaml
 oc apply -f ./test/sample-cert.yaml
 ```
 

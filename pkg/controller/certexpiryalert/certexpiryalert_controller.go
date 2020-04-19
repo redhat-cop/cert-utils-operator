@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -24,7 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_certexpiryalert")
+const controllerName = "certexpiryalert_controller"
+
+var log = logf.Log.WithName(controllerName)
 
 const certExpiryAlertAnnotation = util.AnnotationBase + "/generate-cert-expiry-alert"
 const certExpiryCheckFrequencyAnnotation = util.AnnotationBase + "/cert-expiry-check-frequency"
@@ -53,13 +54,15 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCertExpiryAlert{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("certexpiryalert-controller")}
+	return &ReconcileCertExpiryAlert{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerName)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("certexpiryalert-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -102,7 +105,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CertExpiryAlert
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Secret",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
 	if err != nil {
 		return err
 	}
@@ -116,9 +123,7 @@ var _ reconcile.Reconciler = &ReconcileCertExpiryAlert{}
 type ReconcileCertExpiryAlert struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a CertExpiryAlert object and makes changes based on the state read
@@ -134,7 +139,7 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 
 	// Fetch the CertExpiryAlert instance
 	instance := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -156,7 +161,7 @@ func (r *ReconcileCertExpiryAlert) Reconcile(request reconcile.Request) (reconci
 	if time.Now().Add(expiryThreshold).After(expiry) {
 		//emit alert
 
-		r.recorder.Event(instance, "Warning", "Certs Soon to Expire", fmt.Sprintf("Certificate expiring in %d days", int(expiry.Sub(time.Now()).Hours()/24)))
+		r.GetRecorder().Event(instance, "Warning", "Certs Soon to Expire", fmt.Sprintf("Certificate expiring in %d days", int(expiry.Sub(time.Now()).Hours()/24)))
 		//reschdule for soon to expire frequency
 
 		return reconcile.Result{
@@ -233,12 +238,4 @@ func getExpiryCheckFrequency(secret *corev1.Secret) time.Duration {
 		return defaultExpireFrequency
 	}
 	return tthreshold
-}
-
-func (r *ReconcileCertExpiryAlert) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }

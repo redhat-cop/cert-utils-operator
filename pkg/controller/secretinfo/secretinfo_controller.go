@@ -5,15 +5,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"reflect"
-	"time"
 
 	"github.com/grantae/certinfo"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -24,7 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_secretinfo")
+const controllerName = "secretinfo_controller"
+
+var log = logf.Log.WithName(controllerName)
 
 const certInfoAnnotation = util.AnnotationBase + "/generate-cert-info"
 const certInfo = "tls.crt.info"
@@ -43,13 +43,15 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSecretInfo{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("secretinfo-controller")}
+	return &ReconcileSecretInfo{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerName)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("secretinfo-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SecretInfo
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Secret",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedSecret)
 	if err != nil {
 		return err
 	}
@@ -107,9 +113,7 @@ var _ reconcile.Reconciler = &ReconcileSecretInfo{}
 type ReconcileSecretInfo struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a SecretInfo object and makes changes based on the state read
@@ -125,7 +129,7 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// Fetch the SecretInfo instance
 	instance := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -149,13 +153,13 @@ func (r *ReconcileSecretInfo) Reconcile(request reconcile.Request) (reconcile.Re
 		delete(instance.Data, caInfo)
 	}
 
-	err = r.client.Update(context.TODO(), instance)
+	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, "unable to update secrer", "secret", instance.GetName())
-		return r.manageError(err, instance)
+		return r.ManageError(instance, err)
 	}
 
-	return reconcile.Result{}, nil
+	return r.ManageSuccess(instance)
 }
 
 func generateCertInfo(pemCert []byte) string {
@@ -176,12 +180,4 @@ func generateCertInfo(pemCert []byte) string {
 		result += res + "\n"
 	}
 	return result
-}
-
-func (r *ReconcileSecretInfo) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }

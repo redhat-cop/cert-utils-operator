@@ -2,33 +2,34 @@ package route
 
 import (
 	"context"
+	errs "errors"
 	"reflect"
-	"time"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const controllerName = "route_controller"
 const certAnnotation = util.AnnotationBase + "/certs-from-secret"
 const destCAAnnotation = util.AnnotationBase + "/destinationCA-from-secret"
 
-var log = logf.Log.WithName("controller_route")
+var log = logf.Log.WithName(controllerName)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -43,15 +44,32 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileRoute{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("route-controller")}
+	return &ReconcileRoute{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerName)),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("route-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
+	}
+
+	reconcileRoute, ok := r.(*ReconcileRoute)
+	if !ok {
+		return errs.New("unable to convert to ReconcileRoute")
+	}
+	if ok, err := reconcileRoute.IsAPIResourceAvailable(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	}); !ok || err != nil {
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// this will filter routes that have the annotation and on update only if the annotation is changed.
@@ -109,7 +127,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Route
-	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForObject{}, isAnnotatedAndSecureRoute)
+	err = c.Watch(&source.Kind{Type: &routev1.Route{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Route",
+		},
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedAndSecureRoute)
+
 	if err != nil {
 		return err
 	}
@@ -147,7 +170,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner Route
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &enqueueRequestForReferecingRoutes{
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{
+		TypeMeta: v1.TypeMeta{
+			Kind: "Secret",
+		},
+	}}, &enqueueRequestForReferecingRoutes{
 		Client: mgr.GetClient(),
 	}, isContentChanged)
 	if err != nil {
@@ -163,9 +190,7 @@ var _ reconcile.Reconciler = &ReconcileRoute{}
 type ReconcileRoute struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	outils.ReconcilerBase
 }
 
 // Reconcile reads that state of the cluster for a Route object and makes changes based on the state read
@@ -181,7 +206,7 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Fetch the Route instance
 	instance := &routev1.Route{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -214,13 +239,13 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	} else {
 		secret := &corev1.Secret{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{
+		err = r.GetClient().Get(context.TODO(), types.NamespacedName{
 			Namespace: instance.GetNamespace(),
 			Name:      secretName,
 		}, secret)
 		if err != nil {
 			log.Error(err, "unable to find referenced secret", "secret", secretName)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 		shouldUpdate = shouldUpdate || populateRouteWithCertifcates(instance, secret)
 	}
@@ -231,29 +256,29 @@ func (r *ReconcileRoute) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	} else {
 		secret := &corev1.Secret{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{
+		err = r.GetClient().Get(context.TODO(), types.NamespacedName{
 			Namespace: instance.GetNamespace(),
 			Name:      caSecretName,
 		}, secret)
 		if err != nil {
 			log.Error(err, "unable to find referenced ca secret", "secret", secretName)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 		shouldUpdate = shouldUpdate || populateRouteDestCA(instance, secret)
 	}
 
 	if shouldUpdate {
-		err = r.client.Update(context.TODO(), instance)
+		err = r.GetClient().Update(context.TODO(), instance)
 		if err != nil {
 			log.Error(err, "unable to update route", "route", instance)
-			return r.manageError(err, instance)
+			return r.ManageError(instance, err)
 		}
 	}
 
 	// if we are here we know it's because a route was create/modified or its referenced secret was created/modified
 	// therefore the only think we need to do is to update the route certificates
 
-	return reconcile.Result{}, nil
+	return r.ManageSuccess(instance)
 }
 
 func matchSecret(c client.Client, secret types.NamespacedName) ([]routev1.Route, error) {
@@ -357,12 +382,4 @@ func populateRouteDestCA(route *routev1.Route, secret *corev1.Secret) bool {
 		}
 	}
 	return shouldUpdate
-}
-
-func (r *ReconcileRoute) manageError(issue error, instance runtime.Object) (reconcile.Result, error) {
-	r.recorder.Event(instance, "Warning", "ProcessingError", issue.Error())
-	return reconcile.Result{
-		RequeueAfter: time.Minute * 2,
-		Requeue:      true,
-	}, nil
 }
