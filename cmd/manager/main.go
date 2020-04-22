@@ -21,7 +21,7 @@ import (
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
-	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
