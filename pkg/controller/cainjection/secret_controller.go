@@ -52,7 +52,13 @@ func addSecretReconciler(mgr manager.Manager, r reconcile.Reconciler) error {
 			if newSecret.Type != util.TLSSecret {
 				return false
 			}
-			return true
+
+			oldSecretDest, _ := e.MetaOld.GetAnnotations()[certAnnotationSecret]
+			newSecretDest, _ := e.MetaNew.GetAnnotations()[certAnnotationSecret]
+			if oldSecretDest != newSecretDest {
+				return true
+			}
+			return false
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
