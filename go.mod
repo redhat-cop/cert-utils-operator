@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/google/martian v2.1.0+incompatible
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.16.0
