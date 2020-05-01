@@ -242,6 +242,11 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 		//log.Info("data read:", "data", string(caBundle))
 	}
 	if secretNamespacedName, ok := instance.GetAnnotations()[certAnnotationSecret]; ok {
+		err = util.ValidateSecretName(secretNamespacedName)
+		if err != nil {
+			log.Error(err, "invalid ca secret name", "secret", secretNamespacedName)
+			return r.ManageError(instance, err)
+		}
 		//we need to inject the secret ca
 		caBundle, err = r.getSecretCA(secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:], secretNamespacedName[:strings.Index(secretNamespacedName, "/")])
 		if err != nil {
