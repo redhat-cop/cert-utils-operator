@@ -20,3 +20,12 @@ func ValidateSecretName(secretNamespacedName string) error {
 
 	return nil
 }
+
+func ValidateConfigMapName(configMapNamespacedName string) error {
+	if strings.Index(configMapNamespacedName, "/") == -1 {
+		err := errors.New("Invalid ca configmap name does not match format {namespace}/{configmap-name}")
+		return err
+	}
+
+	return nil
+}
