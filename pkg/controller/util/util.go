@@ -10,6 +10,7 @@ const AnnotationBase = "cert-utils-operator.redhat-cop.io"
 const Cert = "tls.crt"
 const Key = "tls.key"
 const CA = "ca.crt"
+const CABundle = "ca-bundle.crt"
 
 func ValidateSecretName(secretNamespacedName string) error {
 	if strings.Index(secretNamespacedName, "/") == -1 {
