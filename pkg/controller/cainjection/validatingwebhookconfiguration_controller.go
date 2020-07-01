@@ -35,6 +35,7 @@ func init() {
 
 const controllerNamewca = "webhook_ca_injection_controller"
 const certAnnotationSecret = util.AnnotationBase + "/injectca-from-secret"
+const certAnnotationConfigMap = util.AnnotationBase + "/injectca-from-configmap"
 const certAnnotationServiceCA = util.AnnotationBase + "/injectca-from-service_ca"
 
 //const systemCAFile = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"

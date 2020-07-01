@@ -58,6 +58,12 @@ func addSecretReconciler(mgr manager.Manager, r reconcile.Reconciler) error {
 			if oldSecretDest != newSecretDest {
 				return true
 			}
+
+			oldSecretDest, _ = e.MetaOld.GetAnnotations()[certAnnotationConfigMap]
+			newSecretDest, _ = e.MetaNew.GetAnnotations()[certAnnotationConfigMap]
+			if oldSecretDest != newSecretDest {
+				return true
+			}
 			return false
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -69,7 +75,8 @@ func addSecretReconciler(mgr manager.Manager, r reconcile.Reconciler) error {
 				return false
 			}
 			_, ok1 := e.Meta.GetAnnotations()[certAnnotationSecret]
-			return ok1
+			_, ok2 := e.Meta.GetAnnotations()[certAnnotationConfigMap]
+			return ok1 || ok2
 		},
 	}
 
@@ -176,6 +183,23 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 			return r.ManageError(instance, err)
 		}
 	}
+
+	if configMapNamespacedName, ok := instance.GetAnnotations()[certAnnotationConfigMap]; ok {
+		log.Info("found a configmap injection")
+		err = util.ValidateConfigMapName(configMapNamespacedName)
+		if err != nil {
+			log.Error(err, "invalid ca configmap name", "secret", configMapNamespacedName)
+			return r.ManageError(instance, err)
+		}
+
+		//we need to inject the secret ca
+		caBundle, err = r.getConfigMapCA(configMapNamespacedName[strings.Index(configMapNamespacedName, "/")+1:], configMapNamespacedName[:strings.Index(configMapNamespacedName, "/")])
+		if err != nil {
+			log.Error(err, "unable to retrive ca from configmap", "configmap", configMapNamespacedName)
+			return r.ManageError(instance, err)
+		}
+	}
+
 	if len(caBundle) == 0 {
 		delete(instance.Data, util.CA)
 	} else {
@@ -270,4 +294,17 @@ func (r *ReconcileSecret) getSecretCA(secretName string, secretNamespace string)
 		return []byte{}, err
 	}
 	return secret.Data[util.CA], nil
+}
+
+func (r *ReconcileSecret) getConfigMapCA(configMapName string, configMapNamespace string) ([]byte, error) {
+	secret := &corev1.ConfigMap{}
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{
+		Namespace: configMapNamespace,
+		Name:      configMapName,
+	}, secret)
+	if err != nil {
+		log.Error(err, "unable to find referenced configmap", "configmap", configMapName)
+		return []byte{}, err
+	}
+	return []byte(secret.Data[util.CABundle]), nil
 }
