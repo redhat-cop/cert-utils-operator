@@ -31,7 +31,7 @@ native-test: generate fmt vet
 	go test ./pkg/... ./cmd/... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
+manager: generate fmt vet native-test
 	go build -o build/_output/bin/cert-utils-operator  -ldflags $(LDFLAGS) github.com/redhat-cop/cert-utils-operator/cmd/manager
 
 # Build manager binary
