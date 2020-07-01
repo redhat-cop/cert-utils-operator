@@ -239,6 +239,9 @@ func getTrustStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
 				Content: p.Bytes,
 			},
 		}
+
+		// increment counter
+		i++
 	}
 	buffer := bytes.Buffer{}
 	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(secret)))
