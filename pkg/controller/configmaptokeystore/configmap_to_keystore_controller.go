@@ -176,6 +176,7 @@ func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap) ([]byte, error) {
 				Content: p.Bytes,
 			},
 		}
+		i++
 	}
 	buffer := bytes.Buffer{}
 	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(configMap)))
