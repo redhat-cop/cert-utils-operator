@@ -56,6 +56,7 @@ Note that the two annotations can point to different secrets.
 
 ## Creating java keystore and truststore
 
+### Secrets
 This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-java-keystores: "true"`.
 
 When this annotation is set two more entries are added to the secret:
@@ -70,6 +71,17 @@ A such annotated secret looks like the following:
 ![keystore](media/keystore.png)
 
 The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
+
+### ConfigMaps
+This feature is activated with the following annotation on a configmap: `cert-utils-operator.redhat-cop.io/generate-java-truststore: "true"`.
+
+When this annotation is the following entry is added to the configmap as binaryData:
+
+1. `trustsstore.jks`: this Java keystore contains the `ca-bundle.crt` certificate.
+
+Note that Java Keystore require the key to be in [PKCS#8](https://en.wikipedia.org/wiki/PKCS_8) format. It is a responsibility of the certificate provisioner to make sure the key is in this format. No validation is currently performed by the cert-utils operator.
+
+The default password for these keystores is `changeit`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
 
 ## Showing info on the certificates
 
