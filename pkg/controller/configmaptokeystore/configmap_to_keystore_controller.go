@@ -118,7 +118,7 @@ type ReconcileConfigMap struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling Secret")
+	reqLogger.Info("Reconciling ConfigMap")
 
 	// Fetch the Secret instance
 	instance := &corev1.ConfigMap{}
@@ -141,7 +141,10 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 				log.Error(err, "unable to create truststore from configmap", "configmap", instance.Namespace+"/"+instance.Name)
 				return reconcile.Result{}, err
 			}
-			instance.Data[truststoreName] = trustStore
+			if instance.BinaryData == nil {
+				instance.BinaryData = make(map[string][]byte)
+			}
+			instance.BinaryData[truststoreName] = trustStore
 		}
 	} else {
 		delete(instance.Data, truststoreName)
@@ -156,11 +159,11 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	return r.ManageSuccess(instance)
 }
 
-func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap) (string, error) {
+func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
 	ca, ok := configMap.Data[util.CABundle]
 	if !ok {
-		return "", errors.New("ca bundle key not found: " + util.CABundle)
+		return nil, errors.New("ca bundle key not found: " + util.CABundle)
 	}
 	i := 0
 	for p, rest := pem.Decode([]byte(ca)); p != nil; p, rest = pem.Decode(rest) {
@@ -178,9 +181,9 @@ func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap) (string, error) {
 	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(configMap)))
 	if err != nil {
 		log.Error(err, "unable to encode keystore", "keystore", keyStore)
-		return "", err
+		return nil, err
 	}
-	return string(buffer.Bytes()), nil
+	return buffer.Bytes(), nil
 }
 
 func getPassword(configMap *corev1.ConfigMap) string {
