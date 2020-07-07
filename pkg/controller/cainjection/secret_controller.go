@@ -58,7 +58,6 @@ func addSecretReconciler(mgr manager.Manager, r reconcile.Reconciler) error {
 			if oldSecretDest != newSecretDest {
 				return true
 			}
-
 			return false
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
