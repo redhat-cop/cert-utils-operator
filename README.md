@@ -77,11 +77,17 @@ This feature is activated with the following annotation on a configmap: `cert-ut
 
 When this annotation is the following entry is added to the configmap as binaryData:
 
-1. `trustsstore.jks`: this Java keystore contains the `ca-bundle.crt` certificate.
+1. `truststore.jks`: this Java keystore contains the `ca-bundle.crt` certificate.
 
 Note that Java Keystore require the key to be in [PKCS#8](https://en.wikipedia.org/wiki/PKCS_8) format. It is a responsibility of the certificate provisioner to make sure the key is in this format. No validation is currently performed by the cert-utils operator.
 
 The default password for these keystores is `changeit`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
+
+| Annotation  | Default  | Description  |
+|:-|:-:|---|
+| `cert-utils-operator.redhat-cop.io/java-keystore-password` | changeit | The password to use when consuming the JKS trust store |
+| `cert-utils-operator.redhat-cop.io/generate-java-truststore` | false | Should the JKS file be generated and attached to the configmap |
+| `cert-utils-operator.redhat-cop.io/source-ca-key` | ca-bundle.crt | The key in the configmap which will be read to generate the truststore.jks |
 
 ## Showing info on the certificates
 
