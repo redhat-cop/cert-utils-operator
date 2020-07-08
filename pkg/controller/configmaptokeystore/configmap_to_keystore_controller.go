@@ -30,6 +30,7 @@ const controllerName = "configmap_to_keystore_controller"
 var log = logf.Log.WithName(controllerName)
 
 const javaTrustStoreAnnotation = util.AnnotationBase + "/generate-java-truststore"
+const javaTrustStoreSourceAnnotation = util.AnnotationBase + "/source-ca-key"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
 const defaultpassword = "changeme"
 const truststoreName = "truststore.jks"
@@ -72,10 +73,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			}
 			oldValue, _ := e.MetaOld.GetAnnotations()[javaTrustStoreAnnotation]
 			newValue, _ := e.MetaNew.GetAnnotations()[javaTrustStoreAnnotation]
+			oldSourceKey := getSourceKey(e.MetaOld.GetAnnotations())
+			newSourceKey := getSourceKey(e.MetaNew.GetAnnotations())
+
 			old := oldValue == "true"
 			new := newValue == "true"
 			// if the content has changed we trigger is the annotation is there
-			if !reflect.DeepEqual(newConfigMap.Data[util.CABundle], oldConfigMap.Data[util.CABundle]) {
+			if !reflect.DeepEqual(newConfigMap.Data[newSourceKey], oldConfigMap.Data[oldSourceKey]) {
 				return new
 			}
 			// otherwise we trigger if the annotation has changed
@@ -135,8 +139,9 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 	value, _ := instance.GetAnnotations()[javaTrustStoreAnnotation]
 	if value == "true" {
-		if value, ok := instance.Data[util.CABundle]; ok && len(value) != 0 {
-			trustStore, err := getTrustStoreFromConfigMap(instance)
+		sourceKey := getSourceKey(instance.GetAnnotations())
+		if value, ok := instance.Data[sourceKey]; ok && len(value) != 0 {
+			trustStore, err := getTrustStoreFromConfigMap(instance, sourceKey)
 			if err != nil {
 				log.Error(err, "unable to create truststore from configmap", "configmap", instance.Namespace+"/"+instance.Name)
 				return reconcile.Result{}, err
@@ -159,11 +164,11 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	return r.ManageSuccess(instance)
 }
 
-func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap) ([]byte, error) {
+func getTrustStoreFromConfigMap(configMap *corev1.ConfigMap, sourceKey string) ([]byte, error) {
 	keyStore := keystore.KeyStore{}
-	ca, ok := configMap.Data[util.CABundle]
+	ca, ok := configMap.Data[sourceKey]
 	if !ok {
-		return nil, errors.New("ca bundle key not found: " + util.CABundle)
+		return nil, errors.New("ca bundle key not found: " + sourceKey)
 	}
 	i := 0
 	for p, rest := pem.Decode([]byte(ca)); p != nil; p, rest = pem.Decode(rest) {
@@ -192,4 +197,14 @@ func getPassword(configMap *corev1.ConfigMap) string {
 		return pwd
 	}
 	return defaultpassword
+}
+
+func getSourceKey(annotations map[string]string) string {
+	sourceKey, err := annotations[javaTrustStoreSourceAnnotation]
+
+	if !err || len(sourceKey) == 0 {
+		sourceKey = util.CABundle
+	}
+
+	return sourceKey
 }
