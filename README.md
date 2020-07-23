@@ -169,6 +169,7 @@ In addition to those objects, it is also possible to inject ca bundles from secr
 
 Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
 
+<<<<<<< HEAD
 
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
