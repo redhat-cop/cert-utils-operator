@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	routev1 "github.com/openshift/api/route/v1"
@@ -15,16 +16,17 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/redhat-cop/cert-utils-operator/pkg/apis"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -68,6 +70,8 @@ func main() {
 
 	printVersion()
 
+	os.Setenv(k8sutil.WatchNamespaceEnvVar, "")
+
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
@@ -89,12 +93,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
+	// Set default manager options
+	options := manager.Options{
 		Namespace:          namespace,
-		MapperProvider:     restmapper.NewDynamicRESTMapper,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-	})
+	}
+
+	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
+	// Note that this is not intended to be used for excluding namespaces, this is better done via a Predicate
+	// Also note that you may face performance issues when using this with a high number of namespaces.
+	// More Info: https://godoc.org/github.com/kubernetes-sigs/controller-runtime/pkg/cache#MultiNamespacedCacheBuilder
+	if strings.Contains(namespace, ",") {
+		options.Namespace = ""
+		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(namespace, ","))
+	}
+
+	// Create a new manager to provide shared dependencies and start components
+	mgr, err := manager.New(cfg, options)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -125,8 +140,7 @@ func main() {
 	}
 
 	// Add the Metrics Service
-	// this operator does not define any CRD so it does not need to serve metrics
-	//addMetrics(ctx, cfg)
+	addMetrics(ctx, cfg)
 
 	log.Info("Starting the Cmd.")
 
@@ -187,10 +201,7 @@ func serveCRMetrics(cfg *rest.Config, operatorNs string) error {
 	// The function below returns a list of filtered operator/CR specific GVKs. For more control, override the GVK list below
 	// with your own custom logic. Note that if you are adding third party API schemas, probably you will need to
 	// customize this implementation to avoid permissions issues.
-	filteredGVK, err := k8sutil.GetGVKsFromAddToScheme(apis.AddToScheme)
-	if err != nil {
-		return err
-	}
+	filteredGVK := []schema.GroupVersionKind{}
 
 	// The metrics will be generated from the namespaces which are returned here.
 	// NOTE that passing nil or an empty list of namespaces in GenerateAndServeCRMetrics will result in an error.

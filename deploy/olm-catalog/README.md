@@ -15,16 +15,10 @@ I wasn't able to automate this set of steps, unfortunately.
 
 update the [`deploy/operator.yaml`](./deploy/operator.yaml) with the image tag of the version you are about to release. Also update anything else that might have change in this release in the manifests.
 
-If you creating the csv for the first time run the following:
+run the following:
 
 ```shell
-operator-sdk olm-catalog gen-csv --csv-version $new_version --csv-channel alpha --default-channel
-```
-
-If you are updating run the following:
-
-```shell
-operator-sdk generate csv --csv-version $new_version --from-version $old_version --make-manifests=false
+operator-sdk generate csv --csv-version $new_version --from-version $old_version --update-crds --make-manifests=false
 ```
 
 verify the created csv:
@@ -40,7 +34,7 @@ One new way to test is the following:
 
 ```shell
 oc new-project cert-utils-operator
-operator-sdk run --olm --olm-namespace openshift-operator-lifecycle-manager --operator-namespace cert-utils-operator --install-mode=OwnNamespace=cert-utils-operator --operator-version $new_version
+operator-sdk run packagemanifests --operator-version ${new_version} --olm-namespace openshift-operator-lifecycle-manager --operator-namespace cert-utils-operator --install-mode=OwnNamespace=cert-utils-operator
 ```
 
 Test what the operator would look like in OperatorHub, by going to this [site](https://operatorhub.io/preview) and paste the csv/

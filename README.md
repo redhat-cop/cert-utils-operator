@@ -169,16 +169,17 @@ In addition to those objects, it is also possible to inject ca bundles from secr
 
 Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
 
-Ensure go modules are active by defining this environment variable:
-
-```shell
-export GO111MODULE=on
-```
 
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
 ```shell
-OPERATOR_NAME="cert-utils-operator" operator-sdk run --local --operator-flags "--systemCaFilename $(pwd)/README.md --zap-level=debug" --watch-namespace=""
+oc new-project cert-utils-operator
+oc apply -f deploy/service_account.yaml -n cert-utils-operator
+oc apply -f deploy/role.yaml -n cert-utils-operator
+oc apply -f deploy/role_binding.yaml -n cert-utils-operator
+export token=$(oc serviceaccounts get-token 'cert-utils-operator' -n cert-utils-operator)
+oc login --token=${token}
+OPERATOR_NAME="cert-utils-operator" operator-sdk run local --operator-flags "--systemCaFilename $(pwd)/README.md --zap-level=debug" --watch-namespace="" --verbose
 ```
 
 replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.
