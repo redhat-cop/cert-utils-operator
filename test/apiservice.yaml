@@ -2,27 +2,32 @@
 apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
-  name: test-secret-injection1.from-secret
+  name: v1beta1.cert-utils1.example.com
   annotations:
     cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
 spec:
   group: cert-utils1.example.com
+  groupPriorityMinimum: 2
   service:
     name: a-service
     namespace: a-namespace
     port: 443
   version: v1beta1
+  versionPriority: 1
+
 ---
 apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
-  name: test-secret-injection1.from-file
+  name: v1beta1.cert-utils2.example.com
   annotations:
     cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"
 spec:
   group: cert-utils2.example.com
+  groupPriorityMinimum: 2
   service:
     name: a-service
     namespace: a-namespace
     port: 443
-  version: v1beta1    
+  version: v1beta1 
+  versionPriority: 1   

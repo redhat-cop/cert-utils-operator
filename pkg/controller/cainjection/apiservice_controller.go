@@ -14,7 +14,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/kube-aggregator/pkg/apis/apiregistration"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -62,7 +62,7 @@ func addAPIService(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CRD
-	err = c.Watch(&source.Kind{Type: &apiregistration.APIService{
+	err = c.Watch(&source.Kind{Type: &apiregistrationv1.APIService{
 		TypeMeta: v1.TypeMeta{
 			Kind: "APIService",
 		},
@@ -173,7 +173,7 @@ func (r *ReconcileAPIService) Reconcile(request reconcile.Request) (reconcile.Re
 	reqLogger.Info("Reconciling APIService")
 
 	// Fetch the apiservice instance
-	instance := &apiregistration.APIService{}
+	instance := &apiregistrationv1.APIService{}
 	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -220,14 +220,14 @@ func (r *ReconcileAPIService) Reconcile(request reconcile.Request) (reconcile.Re
 	return r.ManageSuccess(instance)
 }
 
-func matchSecretWithAPIService(c client.Client, secret types.NamespacedName) ([]apiregistration.APIService, error) {
-	APIServiceList := &apiregistration.APIServiceList{}
+func matchSecretWithAPIService(c client.Client, secret types.NamespacedName) ([]apiregistrationv1.APIService, error) {
+	APIServiceList := &apiregistrationv1.APIServiceList{}
 	err := c.List(context.TODO(), APIServiceList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list apiservices")
-		return []apiregistration.APIService{}, err
+		return []apiregistrationv1.APIService{}, err
 	}
-	result := []apiregistration.APIService{}
+	result := []apiregistrationv1.APIService{}
 	for _, APIService := range APIServiceList.Items {
 		if secretNamespacedName := APIService.GetAnnotations()[certAnnotationSecret]; secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:] == secret.Name && secretNamespacedName[:strings.Index(secretNamespacedName, "/")] == secret.Namespace {
 			result = append(result, APIService)
@@ -236,14 +236,14 @@ func matchSecretWithAPIService(c client.Client, secret types.NamespacedName) ([]
 	return result, nil
 }
 
-func matchSystemCAWithAPIService(c client.Client) ([]apiregistration.APIService, error) {
-	APIServiceList := &apiregistration.APIServiceList{}
+func matchSystemCAWithAPIService(c client.Client) ([]apiregistrationv1.APIService, error) {
+	APIServiceList := &apiregistrationv1.APIServiceList{}
 	err := c.List(context.TODO(), APIServiceList, &client.ListOptions{})
 	if err != nil {
 		log.Error(err, "unable to list apiservices")
-		return []apiregistration.APIService{}, err
+		return []apiregistrationv1.APIService{}, err
 	}
-	result := []apiregistration.APIService{}
+	result := []apiregistrationv1.APIService{}
 	for _, APIService := range APIServiceList.Items {
 		if ann, ok := APIService.GetAnnotations()[certAnnotationServiceCA]; ok && ann == "true" {
 			result = append(result, APIService)
@@ -259,7 +259,7 @@ type enqueueRequestForReferecingAPIServices struct {
 
 // trigger a router reconcile event for those routes that reference this secret
 func (e *enqueueRequestForReferecingAPIServices) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-	APIServices := []apiregistration.APIService{}
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
 		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.Meta.GetName(),
@@ -279,7 +279,7 @@ func (e *enqueueRequestForReferecingAPIServices) Create(evt event.CreateEvent, q
 // Update implements EventHandler
 // trigger a router reconcile event for those routes that reference this secret
 func (e *enqueueRequestForReferecingAPIServices) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
-	APIServices := []apiregistration.APIService{}
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
 		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.MetaNew.GetName(),
@@ -303,7 +303,7 @@ func (e *enqueueRequestForReferecingAPIServices) Delete(evt event.DeleteEvent, q
 
 // Generic implements EventHandler
 func (e *enqueueRequestForReferecingAPIServices) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
-	APIServices := []apiregistration.APIService{}
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
 		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.Meta.GetName(),

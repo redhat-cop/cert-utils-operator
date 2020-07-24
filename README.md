@@ -17,7 +17,7 @@ The functionalities are the following:
 2. [Ability to create java keystore and truststore from the certificates](#Creating-java-keystore-and-truststore)
 3. [Ability to show info regarding the certificates](#Showing-info-on-the-certificates)
 4. [Ability to alert when a certificate is about to expire](#Alerting-when-a-certificate-is-about-to-expire)
-5. [Ability to inject ca bundles in Secrets, ConfigMaps, ValidatingWebhookConfiguration, MutatingWebhookConfiguration and CustomResourceDefinition objects](#CA-injection)
+5. [Ability to inject ca bundles in Secrets, ConfigMaps, ValidatingWebhookConfiguration, MutatingWebhookConfiguration CustomResourceDefinition and APIService objects](#CA-injection)
 
 All these feature are activated via opt-in annotations.
 
@@ -124,7 +124,8 @@ Here is an example of a certificate soon-to-expiry event:
 
 ## CA Injection
 
-[ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) and [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. I order to do so over an encrypted connection a CA bundle needs to be configured. In these objects the CA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
+[ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) and [APIService](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. In order to do so over an encrypted connection, a CA bundle needs to be configured. In these objects the CA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
+
 This feature allows you to inject the ca bundle from either a `kubernetes.io/tls` secret or from the service_ca.crt file mounted in every pod. The latter is useful if you are protecting your webhook with a certificate generated with the [service service certificate secret](https://docs.openshift.com/container-platform/3.11/dev_guide/secrets.html#service-serving-certificate-secrets) feature.
 
 This feature is activated by the following annotations:
@@ -163,13 +164,11 @@ In addition to those objects, it is also possible to inject ca bundles from secr
     namespace: test-cert-utils
   ```
 
-[Projected volumes](https://kubernetes.io/docs/concepts/storage/volumes/#projected) can be use dto merge the caBundle with other pieces of configuration and or change the key name.
+[Projected volumes](https://kubernetes.io/docs/concepts/storage/volumes/#projected) can be used to merge the caBundle with other pieces of configuration and or change the key name.
 
 ## Local Development
 
 Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
-
-<<<<<<< HEAD
 
 Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
 
