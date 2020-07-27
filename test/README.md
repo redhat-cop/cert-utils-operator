@@ -24,6 +24,9 @@ oc apply -f ./test/routes.yaml
 Test ca-injection
 
 ```shell
-oc apply -f ./test/webhookconfiguration.yaml
+oc apply -f ./test/validatingwebhookconfiguration.yaml
+oc apply -f ./test/mutatingwebhookconfiguration.yaml
+oc apply -f ./test/crd.yaml
 oc apply -f ./test/ca_injection_in_secret_configmap.yaml
+oc apply -f ./test/apiservice.yaml
 ```

@@ -2,7 +2,6 @@ package cainjection
 
 import (
 	"context"
-	"flag"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -10,12 +9,12 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/redhat-cop/cert-utils-operator/pkg/controller/util"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -23,73 +22,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var systemCAFile string
-
-func init() {
-	flag.StringVar(&systemCAFile, "systemCaFilename", "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt", "file where the system ca can be found")
-}
-
-const controllerNamewca = "webhook_ca_injection_controller"
-const certAnnotationSecret = util.AnnotationBase + "/injectca-from-secret"
-const certAnnotationServiceCA = util.AnnotationBase + "/injectca-from-service_ca"
-
-//const systemCAFile = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
-const secretInjection = "Secret"
-const systemCAInjection = "System"
-
-var log = logf.Log.WithName("ca_injection_controller")
+const controllerNameAPIService = "apiservice_controller"
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
-
-// Add creates a new ValidatingWebhookConfiguration Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	err := addMutating(mgr, newMutatingReconciler(mgr))
-	if err != nil {
-		return err
-	}
-	err = addCRD(mgr, newCRDReconciler(mgr))
-	if err != nil {
-		return err
-	}
-	err = addSecretReconciler(mgr, newSecretReconciler(mgr))
-	if err != nil {
-		return err
-	}
-	err = addConfigmapReconciler(mgr, newConfigmapReconciler(mgr))
-	if err != nil {
-		return err
-	}
-	err = addAPIService(mgr, newAPIServiceReconciler(mgr))
-	if err != nil {
-		return err
-	}
-	return addValidating(mgr, newValidatingReconciler(mgr))
-}
-
 // newReconciler returns a new reconcile.Reconciler
-func newValidatingReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileValidatingWebhookConfiguration{
-		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerNamewca)),
+func newAPIServiceReconciler(mgr manager.Manager) reconcile.Reconciler {
+	return &ReconcileAPIService{
+		ReconcilerBase: outils.NewReconcilerBase(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), mgr.GetEventRecorderFor(controllerNameAPIService)),
 	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
+func addAPIService(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New(controllerNamewca, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerNameAPIService, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	isAnnotatedValidatingWebhookConfiguration := predicate.Funcs{
+	isAnnotatedAPIService := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, _ := e.MetaOld.GetAnnotations()[certAnnotationSecret]
 			newSecret, _ := e.MetaNew.GetAnnotations()[certAnnotationSecret]
@@ -104,12 +61,12 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 
-	// Watch for changes to primary resource ValidatingWebhookConfiguration
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+	// Watch for changes to primary resource CRD
+	err = c.Watch(&source.Kind{Type: &apiregistrationv1.APIService{
 		TypeMeta: v1.TypeMeta{
-			Kind: "ValidatingWebhookConfiguration",
+			Kind: "APIService",
 		},
-	}}, &handler.EnqueueRequestForObject{}, isAnnotatedValidatingWebhookConfiguration)
+	}}, &handler.EnqueueRequestForObject{}, isAnnotatedAPIService)
 	if err != nil {
 		return err
 	}
@@ -145,9 +102,9 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ValidatingWebhookConfiguration
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{
 		TypeMeta: v1.TypeMeta{
-			Kind: "secret",
+			Kind: "Secret",
 		},
-	}}, &enqueueRequestForReferecingValidatingWebHooks{
+	}}, &enqueueRequestForReferecingAPIServices{
 		Client:        mgr.GetClient(),
 		InjectionType: secretInjection,
 	}, isContentChanged)
@@ -188,7 +145,7 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	err = c.Watch(
 		&source.Channel{Source: events},
-		&enqueueRequestForReferecingValidatingWebHooks{
+		&enqueueRequestForReferecingCRDs{
 			Client:        mgr.GetClient(),
 			InjectionType: systemCAInjection,
 		},
@@ -200,28 +157,23 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileValidatingWebhookConfiguration{}
+var _ reconcile.Reconciler = &ReconcileCRD{}
 
-// ReconcileValidatingWebhookConfiguration reconciles a ValidatingWebhookConfiguration object
-type ReconcileValidatingWebhookConfiguration struct {
+// ReconcileAPIServer reconciles a apiserver object
+type ReconcileAPIService struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	outils.ReconcilerBase
 }
 
-// Reconcile reads that state of the cluster for a ValidatingWebhookConfiguration object and makes changes based on the state read
-// and what is in the ValidatingWebhookConfiguration.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reads that state of the cluster for a apiservice object and makes changes based on the state read
+// and what is in the apiservice.Spec
+func (r *ReconcileAPIService) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling ValidatingWebhookConfiguration")
+	reqLogger.Info("Reconciling APIService")
 
-	// Fetch the ValidatingWebhookConfiguration instance
-	instance := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+	// Fetch the apiservice instance
+	instance := &apiregistrationv1.APIService{}
 	err := r.GetClient().Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -243,7 +195,6 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 			log.Error(err, "unable to read file", "file", systemCAFile)
 			return r.ManageError(instance, err)
 		}
-		//log.Info("data read:", "data", string(caBundle))
 	}
 	if secretNamespacedName, ok := instance.GetAnnotations()[certAnnotationSecret]; ok {
 		err = util.ValidateSecretName(secretNamespacedName)
@@ -258,117 +209,118 @@ func (r *ReconcileValidatingWebhookConfiguration) Reconcile(request reconcile.Re
 			return r.ManageError(instance, err)
 		}
 	}
-	for i := range instance.Webhooks {
-		instance.Webhooks[i].ClientConfig.CABundle = caBundle
-	}
+
+	//we update only if the fields are initialized
+	instance.Spec.CABundle = caBundle
 	err = r.GetClient().Update(context.TODO(), instance)
 	if err != nil {
 		return r.ManageError(instance, err)
 	}
+
 	return r.ManageSuccess(instance)
 }
 
-func matchSecretWithValidatingWebhooks(c client.Client, secret types.NamespacedName) ([]admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
-	validatingWebHookList := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), validatingWebHookList, &client.ListOptions{})
+func matchSecretWithAPIService(c client.Client, secret types.NamespacedName) ([]apiregistrationv1.APIService, error) {
+	APIServiceList := &apiregistrationv1.APIServiceList{}
+	err := c.List(context.TODO(), APIServiceList, &client.ListOptions{})
 	if err != nil {
-		log.Error(err, "unable to list ValidatingWebhookConfiguration for this namespace: ")
-		return []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}, err
+		log.Error(err, "unable to list apiservices")
+		return []apiregistrationv1.APIService{}, err
 	}
-	result := []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-	for _, validatingWebHook := range validatingWebHookList.Items {
-		if secretNamespacedName := validatingWebHook.GetAnnotations()[certAnnotationSecret]; secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:] == secret.Name && secretNamespacedName[:strings.Index(secretNamespacedName, "/")] == secret.Namespace {
-			result = append(result, validatingWebHook)
+	result := []apiregistrationv1.APIService{}
+	for _, APIService := range APIServiceList.Items {
+		if secretNamespacedName := APIService.GetAnnotations()[certAnnotationSecret]; secretNamespacedName[strings.Index(secretNamespacedName, "/")+1:] == secret.Name && secretNamespacedName[:strings.Index(secretNamespacedName, "/")] == secret.Namespace {
+			result = append(result, APIService)
 		}
 	}
 	return result, nil
 }
 
-func matchSystemCAWithValidatingWebhooks(c client.Client) ([]admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
-	validatingWebHookList := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	err := c.List(context.TODO(), validatingWebHookList, &client.ListOptions{})
+func matchSystemCAWithAPIService(c client.Client) ([]apiregistrationv1.APIService, error) {
+	APIServiceList := &apiregistrationv1.APIServiceList{}
+	err := c.List(context.TODO(), APIServiceList, &client.ListOptions{})
 	if err != nil {
-		log.Error(err, "unable to list ValidatingWebhookConfiguration for all namespaces")
-		return []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}, err
+		log.Error(err, "unable to list apiservices")
+		return []apiregistrationv1.APIService{}, err
 	}
-	result := []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-	for _, validatingWebHook := range validatingWebHookList.Items {
-		if ann, ok := validatingWebHook.GetAnnotations()[certAnnotationServiceCA]; ok && ann == "true" {
-			result = append(result, validatingWebHook)
+	result := []apiregistrationv1.APIService{}
+	for _, APIService := range APIServiceList.Items {
+		if ann, ok := APIService.GetAnnotations()[certAnnotationServiceCA]; ok && ann == "true" {
+			result = append(result, APIService)
 		}
 	}
 	return result, nil
 }
 
-type enqueueRequestForReferecingValidatingWebHooks struct {
+type enqueueRequestForReferecingAPIServices struct {
 	client.Client
 	InjectionType string
 }
 
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingValidatingWebHooks) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-	validatingWebHooks := []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+func (e *enqueueRequestForReferecingAPIServices) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
-		validatingWebHooks, _ = matchSecretWithValidatingWebhooks(e.Client, types.NamespacedName{
+		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.Meta.GetName(),
 			Namespace: evt.Meta.GetNamespace(),
 		})
 	}
 	if e.InjectionType == systemCAInjection {
-		validatingWebHooks, _ = matchSystemCAWithValidatingWebhooks(e.Client)
+		APIServices, _ = matchSystemCAWithAPIService(e.Client)
 	}
-	for _, validatingWebHook := range validatingWebHooks {
+	for _, CRD := range APIServices {
 		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name: validatingWebHook.GetName(),
+			Name: CRD.GetName(),
 		}})
 	}
 }
 
 // Update implements EventHandler
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingValidatingWebHooks) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
-	validatingWebHooks := []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+func (e *enqueueRequestForReferecingAPIServices) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
-		validatingWebHooks, _ = matchSecretWithValidatingWebhooks(e.Client, types.NamespacedName{
+		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.MetaNew.GetName(),
 			Namespace: evt.MetaNew.GetNamespace(),
 		})
 	}
 	if e.InjectionType == systemCAInjection {
-		validatingWebHooks, _ = matchSystemCAWithValidatingWebhooks(e.Client)
+		APIServices, _ = matchSystemCAWithAPIService(e.Client)
 	}
-	for _, validatingWebHook := range validatingWebHooks {
+	for _, CRD := range APIServices {
 		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name: validatingWebHook.GetName(),
+			Name: CRD.GetName(),
 		}})
 	}
 }
 
 // Delete implements EventHandler
-func (e *enqueueRequestForReferecingValidatingWebHooks) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingAPIServices) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 
 // Generic implements EventHandler
-func (e *enqueueRequestForReferecingValidatingWebHooks) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
-	validatingWebHooks := []admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+func (e *enqueueRequestForReferecingAPIServices) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+	APIServices := []apiregistrationv1.APIService{}
 	if e.InjectionType == secretInjection {
-		validatingWebHooks, _ = matchSecretWithValidatingWebhooks(e.Client, types.NamespacedName{
+		APIServices, _ = matchSecretWithAPIService(e.Client, types.NamespacedName{
 			Name:      evt.Meta.GetName(),
 			Namespace: evt.Meta.GetNamespace(),
 		})
 	}
 	if e.InjectionType == systemCAInjection {
-		validatingWebHooks, _ = matchSystemCAWithValidatingWebhooks(e.Client)
+		APIServices, _ = matchSystemCAWithAPIService(e.Client)
 	}
-	for _, validatingWebHook := range validatingWebHooks {
+	for _, CRD := range APIServices {
 		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-			Name: validatingWebHook.GetName(),
+			Name: CRD.GetName(),
 		}})
 	}
 }
 
-func (r *ReconcileValidatingWebhookConfiguration) getSecretCA(secretName string, secretNamespace string) ([]byte, error) {
+func (r *ReconcileAPIService) getSecretCA(secretName string, secretNamespace string) ([]byte, error) {
 	secret := &corev1.Secret{}
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{
 		Namespace: secretNamespace,
