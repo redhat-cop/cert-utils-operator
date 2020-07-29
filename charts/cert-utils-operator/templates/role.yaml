@@ -31,7 +31,13 @@ rules:
   resources:
   - customresourcedefinitions
   verbs:
-  - "*"      
+  - "*"
+- apiGroups:
+  - "apiregistration.k8s.io"
+  resources:
+  - apiservices
+  verbs:
+  - "*"
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -39,15 +45,15 @@ metadata:
   name: cert-utils-operator
   namespace: {{ .Release.Namespace }}
 rules:
-# leader election   
+# leader election
 - apiGroups:
   - ""
   resources:
   - configmaps
   - pods
   verbs:
-  - "*"  
-#Metrics  
+  - "*"
+#Metrics
 - apiGroups:
   - ""
   resources:
@@ -55,16 +61,16 @@ rules:
   - services/finalizers
   verbs:
   - "*"
-#Metrics  
+#Metrics
 - apiGroups:
   - "apps"
   resources:
   - replicasets
   - deployments
-  verbs: 
+  verbs:
   - "get"
   - "list"
-# Metrics  
+# Metrics
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -72,7 +78,7 @@ rules:
   verbs:
   - "get"
   - "create"
-# Metrics  
+# Metrics
 - apiGroups:
   - apps
   resources:
