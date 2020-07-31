@@ -2,6 +2,7 @@ package cainjection
 
 import (
 	"context"
+	errs "errors"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -113,45 +115,57 @@ func addAPIService(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	//let's watch for the file change
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	err = watcher.Add(systemCAFile)
-	if err != nil {
-		return err
+	// we only do this if we are running on openshift
+	reconcileBase, ok := r.(*ReconcileAPIService)
+	if !ok {
+		return errs.New("unable to convert to ReconcileCRD")
 	}
 
-	events := make(chan event.GenericEvent)
-
-	go func() {
-		for {
-			select {
-			// watch for events
-			case fileEvent := <-watcher.Events:
-				//log.Info("received event on file watcher channel", "event", fileEvent)
-				if fileEvent.Op&fsnotify.Write == fsnotify.Write {
-					// we received a change event on the file
-					events <- event.GenericEvent{}
-				}
-				//we ignore all other events
-
-				// watch for errors
-			case err := <-watcher.Errors:
-				log.Error(err, "error from file watch channel, ignoring ...")
-			}
+	if ok, err := reconcileBase.IsAPIResourceAvailable(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	}); ok && err == nil {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			return err
 		}
-	}()
+		err = watcher.Add(systemCAFile)
+		if err != nil {
+			return err
+		}
 
-	err = c.Watch(
-		&source.Channel{Source: events},
-		&enqueueRequestForReferecingCRDs{
-			Client:        mgr.GetClient(),
-			InjectionType: systemCAInjection,
-		},
-	)
-	if err != nil {
-		return err
+		events := make(chan event.GenericEvent)
+
+		go func() {
+			for {
+				select {
+				// watch for events
+				case fileEvent := <-watcher.Events:
+					//log.Info("received event on file watcher channel", "event", fileEvent)
+					if fileEvent.Op&fsnotify.Write == fsnotify.Write {
+						// we received a change event on the file
+						events <- event.GenericEvent{}
+					}
+					//we ignore all other events
+
+					// watch for errors
+				case err := <-watcher.Errors:
+					log.Error(err, "error from file watch channel, ignoring ...")
+				}
+			}
+		}()
+
+		err = c.Watch(
+			&source.Channel{Source: events},
+			&enqueueRequestForReferecingCRDs{
+				Client:        mgr.GetClient(),
+				InjectionType: systemCAInjection,
+			},
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

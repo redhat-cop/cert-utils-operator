@@ -2,6 +2,7 @@ package cainjection
 
 import (
 	"context"
+	errs "errors"
 	"flag"
 	"io/ioutil"
 	"reflect"
@@ -14,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,22 +55,27 @@ var log = logf.Log.WithName("ca_injection_controller")
 func Add(mgr manager.Manager) error {
 	err := addMutating(mgr, newMutatingReconciler(mgr))
 	if err != nil {
+		log.Error(err, "mutating")
 		return err
 	}
 	err = addCRD(mgr, newCRDReconciler(mgr))
 	if err != nil {
+		log.Error(err, "crd")
 		return err
 	}
 	err = addSecretReconciler(mgr, newSecretReconciler(mgr))
 	if err != nil {
+		log.Error(err, "secret")
 		return err
 	}
 	err = addConfigmapReconciler(mgr, newConfigmapReconciler(mgr))
 	if err != nil {
+		log.Error(err, "configmap")
 		return err
 	}
 	err = addAPIService(mgr, newAPIServiceReconciler(mgr))
 	if err != nil {
+		log.Error(err, "apiservice")
 		return err
 	}
 	return addValidating(mgr, newValidatingReconciler(mgr))
@@ -156,45 +163,57 @@ func addValidating(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	//let's watch for the file change
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	err = watcher.Add(systemCAFile)
-	if err != nil {
-		return err
+	// we only do this if we are running on openshift
+	reconcileBase, ok := r.(*ReconcileValidatingWebhookConfiguration)
+	if !ok {
+		return errs.New("unable to convert to ReconcileValidatingWebhookConfiguration")
 	}
 
-	events := make(chan event.GenericEvent)
-
-	go func() {
-		for {
-			select {
-			// watch for events
-			case fileEvent := <-watcher.Events:
-				//log.Info("received event on file watcher channel", "event", fileEvent)
-				if fileEvent.Op&fsnotify.Write == fsnotify.Write {
-					// we received a change event on the file
-					events <- event.GenericEvent{}
-				}
-				//we ignore all other events
-
-				// watch for errors
-			case err := <-watcher.Errors:
-				log.Error(err, "error from file watch channel, ignoring ...")
-			}
+	if ok, err := reconcileBase.IsAPIResourceAvailable(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	}); ok && err == nil {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			return err
 		}
-	}()
+		err = watcher.Add(systemCAFile)
+		if err != nil {
+			return err
+		}
 
-	err = c.Watch(
-		&source.Channel{Source: events},
-		&enqueueRequestForReferecingValidatingWebHooks{
-			Client:        mgr.GetClient(),
-			InjectionType: systemCAInjection,
-		},
-	)
-	if err != nil {
-		return err
+		events := make(chan event.GenericEvent)
+
+		go func() {
+			for {
+				select {
+				// watch for events
+				case fileEvent := <-watcher.Events:
+					//log.Info("received event on file watcher channel", "event", fileEvent)
+					if fileEvent.Op&fsnotify.Write == fsnotify.Write {
+						// we received a change event on the file
+						events <- event.GenericEvent{}
+					}
+					//we ignore all other events
+
+					// watch for errors
+				case err := <-watcher.Errors:
+					log.Error(err, "error from file watch channel, ignoring ...")
+				}
+			}
+		}()
+
+		err = c.Watch(
+			&source.Channel{Source: events},
+			&enqueueRequestForReferecingValidatingWebHooks{
+				Client:        mgr.GetClient(),
+				InjectionType: systemCAInjection,
+			},
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
