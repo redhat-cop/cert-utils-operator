@@ -1,1 +1,7 @@
 image_tag: 1.2.3
+
+podAnnotations: {}
+podLabels: {}
+
+args:
+  jsonLog: false

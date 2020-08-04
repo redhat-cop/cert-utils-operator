@@ -12,6 +12,13 @@ spec:
     metadata:
       labels:
         name: cert-utils-operator
+{{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+{{- end }}
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+      {{- end }}
     spec:
       serviceAccountName: cert-utils-operator
       containers:
@@ -19,6 +26,9 @@ spec:
           image: quay.io/redhat-cop/cert-utils-operator:{{ .Values.image_tag }}
           command:
           - cert-utils-operator
+          {{- if .Values.args.jsonLog }}
+          - --zap-encoder json
+          {{- end }}
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -32,4 +42,4 @@ spec:
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.namespace              
+                  fieldPath: metadata.namespace
