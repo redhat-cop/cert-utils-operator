@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   cert-utils-operator:
   - apiVersion: v1
+    appVersion: v0.2.2
+    created: "2020-10-16T17:09:43.165596548Z"
+    description: Helm chart that deploys cert-utils-operator
+    digest: d36c82862a52cae4f63ec4bd2dcd10a1ed995077004ea998699f107c4f5f0499
+    engine: gotpl
+    keywords:
+    - certificates
+    - operator
+    name: cert-utils-operator
+    sources:
+    - https://github.com/redhat-cop/cert-utils-operator
+    urls:
+    - https://redhat-cop.github.io/cert-utils-operator/cert-utils-operator/cert-utils-operator-v0.2.2.tgz
+    version: v0.2.2
+  - apiVersion: v1
     appVersion: v0.2.1
-    created: "2020-08-06T19:25:24.25076784Z"
+    created: "2020-10-16T17:09:43.165358335Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 403b7ceb211d85ef2ca543bc3a303b24e97cfad0cd7882cb4437532516abe0b1
     engine: gotpl
@@ -18,7 +33,7 @@ entries:
     version: v0.2.1
   - apiVersion: v1
     appVersion: v0.2.0
-    created: "2020-08-06T19:25:24.250603065Z"
+    created: "2020-10-16T17:09:43.165067009Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 01dc43ee4a32a35df1dd625cc3976bd591dd288c8e87b42c5d73ace6af5db938
     engine: gotpl
@@ -33,7 +48,7 @@ entries:
     version: v0.2.0
   - apiVersion: v1
     appVersion: v0.1.1
-    created: "2020-08-06T19:25:24.250449056Z"
+    created: "2020-10-16T17:09:43.164483298Z"
     description: Helm chart that deploys cert-utils-operator
     digest: e22200edf00e0494c5ab5ecd5717fc6f3b64d935e5b7a70e472e1a89a82be219
     engine: gotpl
@@ -48,7 +63,7 @@ entries:
     version: v0.1.1
   - apiVersion: v1
     appVersion: v0.1.0
-    created: "2020-08-06T19:25:24.250293496Z"
+    created: "2020-10-16T17:09:43.164072946Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 2fef95c73d14cd758c8e15f575a3d587621d25675d1b7cab188ce35ebd08bc4b
     engine: gotpl
@@ -63,7 +78,7 @@ entries:
     version: v0.1.0
   - apiVersion: v1
     appVersion: 0.1.0
-    created: "2020-08-06T19:25:24.249723191Z"
+    created: "2020-10-16T17:09:43.162786367Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 9602701f84c582ff76af0c76c5b58b686ca53b94c10fba82e498be078749e5dd
     engine: gotpl
@@ -78,7 +93,7 @@ entries:
     version: 0.1.0
   - apiVersion: v1
     appVersion: v0.0.3
-    created: "2020-08-06T19:25:24.250120151Z"
+    created: "2020-10-16T17:09:43.163640018Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 08656d0cb2399ee45e8a6aaa881301c1b675055cb3b2596250c7cdca55f8b4cf
     engine: gotpl
@@ -93,7 +108,7 @@ entries:
     version: v0.0.3
   - apiVersion: v1
     appVersion: v0.0.2
-    created: "2020-08-06T19:25:24.249924156Z"
+    created: "2020-10-16T17:09:43.163251035Z"
     description: Helm chart that deploys cert-utils-operator
     digest: ab5f447d7225db537b725a98234d271dd2298983db457ae941c173b5eff39fba
     engine: gotpl
@@ -108,7 +123,7 @@ entries:
     version: v0.0.2
   - apiVersion: v1
     appVersion: 0.0.1
-    created: "2020-08-06T19:25:24.249538023Z"
+    created: "2020-10-16T17:09:43.162297124Z"
     description: Helm chart that deploys cert-utils-operator
     digest: e7935eab7ed51a8a00c9f72667303d88f49013a167f1b838d1327afb6f8c76c8
     engine: gotpl
@@ -121,4 +136,4 @@ entries:
     urls:
     - https://redhat-cop.github.io/cert-utils-operator/cert-utils-operator/cert-utils-operator-0.0.1.tgz
     version: 0.0.1
-generated: "2020-08-06T19:25:24.249218317Z"
+generated: "2020-10-16T17:09:43.161510768Z"
