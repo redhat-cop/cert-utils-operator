@@ -15,7 +15,8 @@ metadata:
   namespace: cert-utils-operator
 spec:
   apiservicedefinitions: {}
-  customresourcedefinitions: {}
+  customresourcedefinitions: 
+    owned: []
   description: |
     Cert utils operator is a set of functionalities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
 
