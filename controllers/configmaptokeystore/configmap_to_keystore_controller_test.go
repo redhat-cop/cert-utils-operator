@@ -8,16 +8,16 @@ import (
 
 	"github.com/pavel-v-chernykh/keystore-go"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubectl/pkg/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConfigmapControllerCreateFromConfigMap(t *testing.T) {
@@ -91,7 +91,10 @@ pPVWQxaZLPSkVrQ0uGE3ycJYgBugl6H8WY3pEfbRD0tVNEYqi4Y7
 	fakeRecorder := record.NewFakeRecorder(3)
 
 	reconcileBase := util.NewReconcilerBase(cl, scheme.Scheme, nil, fakeRecorder, nil)
-	r := &ConfigMapToKeystoreReconciler{ReconcilerBase: reconcileBase}
+	r := &ConfigMapToKeystoreReconciler{
+		ReconcilerBase: reconcileBase,
+		Log:            ctrl.Log.WithName("controllers").WithName("configmap_to_keystore_controller"),
+	}
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -199,7 +202,10 @@ pPVWQxaZLPSkVrQ0uGE3ycJYgBugl6H8WY3pEfbRD0tVNEYqi4Y7
 	fakeRecorder := record.NewFakeRecorder(3)
 
 	reconcileBase := util.NewReconcilerBase(cl, scheme.Scheme, nil, fakeRecorder, nil)
-	r := &ConfigMapToKeystoreReconciler{ReconcilerBase: reconcileBase}
+	r := &ConfigMapToKeystoreReconciler{
+		ReconcilerBase: reconcileBase,
+		Log:            ctrl.Log.WithName("controllers").WithName("configmap_to_keystore_controller"),
+	}
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{

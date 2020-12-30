@@ -61,7 +61,7 @@ spec:
   - name: Cert Utils Operator
     url: https://github.com/redhat-cop/cert-utils-operator
   - name: Container Image
-    url: https://quay.io/redhat-cop/cert-utils-operator 
+    url: https://quay.io/redhat-cop/cert-utils-operator
   maintainers:
   - email: rspazzoli@redhat.com
     name: Raffaele Spazzoli

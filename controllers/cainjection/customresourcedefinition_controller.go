@@ -43,15 +43,16 @@ func (r *CRDReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// +kubebuilder:rbac:groups="apiextensions.k8s.io/v1",resources=customresourcedefinitions,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch
-func (r *CRDReconciler) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.Log.WithValues("crd", request.NamespacedName)
+
+func (r *CRDReconciler) Reconcile(context context.Context, req ctrl.Request) (reconcile.Result, error) {
+	log := r.Log.WithValues("crd", req.NamespacedName)
 
 	// Fetch the mutatingWebhookConfiguration instance
 	instance := &crd.CustomResourceDefinition{}
-	err := r.GetClient().Get(context, request.NamespacedName, instance)
+	err := r.GetClient().Get(context, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

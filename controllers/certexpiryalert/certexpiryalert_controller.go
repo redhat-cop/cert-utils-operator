@@ -95,12 +95,13 @@ func (r *CertExpiryAlertReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch
-func (r *CertExpiryAlertReconciler) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
-	_ = r.Log.WithValues("cert-expiry-alert", request.NamespacedName)
+
+func (r *CertExpiryAlertReconciler) Reconcile(context context.Context, req ctrl.Request) (reconcile.Result, error) {
+	_ = r.Log.WithValues("cert-expiry-alert", req.NamespacedName)
 
 	// Fetch the CertExpiryAlert instance
 	instance := &corev1.Secret{}
-	err := r.GetClient().Get(context, request.NamespacedName, instance)
+	err := r.GetClient().Get(context, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

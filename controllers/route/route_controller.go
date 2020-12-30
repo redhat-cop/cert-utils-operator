@@ -139,12 +139,13 @@ func (r *RouteCertificateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups=route.openshift.io,resources=*,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch
-func (r *RouteCertificateReconciler) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.Log.WithValues("route-certificate", request.NamespacedName)
+
+func (r *RouteCertificateReconciler) Reconcile(context context.Context, req ctrl.Request) (reconcile.Result, error) {
+	log := r.Log.WithValues("route-certificate", req.NamespacedName)
 
 	// Fetch the Route instance
 	instance := &routev1.Route{}
-	err := r.GetClient().Get(context, request.NamespacedName, instance)
+	err := r.GetClient().Get(context, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

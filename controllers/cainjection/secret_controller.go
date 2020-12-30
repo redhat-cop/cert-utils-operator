@@ -45,12 +45,13 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch
-func (r *SecretReconciler) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.Log.WithValues("secret", request.NamespacedName)
+
+func (r *SecretReconciler) Reconcile(context context.Context, req ctrl.Request) (reconcile.Result, error) {
+	log := r.Log.WithValues("secret", req.NamespacedName)
 
 	// Fetch the mutatingWebhookConfiguration instance
 	instance := &corev1.Secret{}
-	err := r.GetClient().Get(context, request.NamespacedName, instance)
+	err := r.GetClient().Get(context, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

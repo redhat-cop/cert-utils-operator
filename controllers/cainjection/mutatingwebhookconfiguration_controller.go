@@ -46,12 +46,13 @@ func (r *MutatingWebhookConfigurationReconciler) SetupWithManager(mgr ctrl.Manag
 // +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=mutatingwebhookconfigurations,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch
-func (r *MutatingWebhookConfigurationReconciler) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := r.Log.WithValues("mutatingwebhookconfiguration", request.NamespacedName)
+
+func (r *MutatingWebhookConfigurationReconciler) Reconcile(context context.Context, req ctrl.Request) (reconcile.Result, error) {
+	log := r.Log.WithValues("mutatingwebhookconfiguration", req.NamespacedName)
 
 	// Fetch the mutatingWebhookConfiguration instance
 	instance := &admissionregistrationv1.MutatingWebhookConfiguration{}
-	err := r.GetClient().Get(context, request.NamespacedName, instance)
+	err := r.GetClient().Get(context, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

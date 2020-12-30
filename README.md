@@ -1,6 +1,8 @@
 # Cert-utils-operator
 
-[![Build Status](https://travis-ci.org/redhat-cop/cert-utils-operator.svg?branch=master)](https://travis-ci.org/redhat-cop/cert-utils-operator) [![Docker Repository on Quay](https://quay.io/repository/redhat-cop/cert-utils-operator/status "Docker Repository on Quay")](https://quay.io/repository/redhat-cop/cert-utils-operator)
+![build status](https://github.com/redhat-cop/cert-utils-operator/workflows/push/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/redhat-cop/cert-utils-operator)](https://goreportcard.com/report/github.com/redhat-cop/cert-utils-operator)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/redhat-cop/cert-utils-operator)
 
 Cert utils operator is a set of functionalities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
 
@@ -42,6 +44,7 @@ Note that the two annotations can point to different secrets.
 ## Creating java keystore and truststore
 
 ### Secrets
+
 This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-java-keystores: "true"`.
 
 When this annotation is set two more entries are added to the secret:
@@ -58,6 +61,7 @@ A such annotated secret looks like the following:
 The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
 
 ### ConfigMaps
+
 This feature is activated with the following annotation on a configmap: `cert-utils-operator.redhat-cop.io/generate-java-truststore: "true"`.
 
 When this annotation is the following entry is added to the configmap as binaryData:
@@ -113,11 +117,9 @@ Here is an example of a certificate soon-to-expiry event:
 
 This feature allows you to inject the ca bundle from either a `kubernetes.io/tls` secret or from the service_ca.crt file mounted in every pod. The latter is useful if you are protecting your webhook with a certificate generated with the [service service certificate secret](https://docs.openshift.com/container-platform/3.11/dev_guide/secrets.html#service-serving-certificate-secrets) feature.
 
-This feature is activated by the following annotations:
+This feature is activated by the following annotation:
 
 1. `cert-utils-operator.redhat-cop.io/injectca-from-secret: <secret namespace>/<secret name>`
-
-2. `cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"`
 
 In addition to those objects, it is also possible to inject ca bundles from secrets to secrets and configmaps:
 
