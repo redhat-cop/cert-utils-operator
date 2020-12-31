@@ -16,6 +16,12 @@ IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
+OPERATOR_NAME ?=$(shell basename -z `pwd`)
+
+CHART_REPO_URL ?= http://example.com
+HELM_REPO_DEST ?= /tmp/gh-pages
+
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -117,3 +123,23 @@ bundle: manifests kustomize
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Generate helm chart
+helmchart: kustomize
+	mkdir -p ./charts/${OPERATOR_NAME}/templates
+	cp ./config/helmchart/templates/* ./charts/${OPERATOR_NAME}/templates
+	$(KUSTOMIZE) build ./config/helmchart | sed 's/release-namespace/{{.Release.namespace}}/' > ./charts/${OPERATOR_NAME}/templates/rbac.yaml
+	version=${VERSION} envsubst < ./config/helmchart/Chart.yaml.tpl  > ./charts/${OPERATOR_NAME}/Chart.yaml
+	version=${VERSION} image_repo=$${IMG%:*} envsubst < ./config/helmchart/values.yaml.tpl  > ./charts/${OPERATOR_NAME}/values.yaml
+	helm lint ./charts/${OPERATOR_NAME}	
+
+helmchart-repo: helmchart
+	mkdir -p ${HELM_REPO_DEST}/${OPERATOR_NAME}
+	helm package -d ${HELM_REPO_DEST}/${OPERATOR_NAME} ./charts/${OPERATOR_NAME}
+	helm repo index --url ${CHART_REPO_URL} ${HELM_REPO_DEST}
+
+helmchart-repo-push: helmchart-repo	
+	git -C ${HELM_REPO_DEST} add .
+	git -C ${HELM_REPO_DEST} status
+	git -C ${HELM_REPO_DEST} commit -m "Release ${VERSION}"
+	git -C ${HELM_REPO_DEST} push origin "gh-pages"		
