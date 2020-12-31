@@ -4,7 +4,7 @@ Deploy cert-manager:
 
 ```shell
 oc create namespace cert-manager
-oc apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.14.1/cert-manager.yaml
+oc apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
 oc apply -f ./test/cert-manager/setup.yaml
 ```
 
@@ -12,13 +12,13 @@ Initialize the CA and certificate needed during the tests
 
 ```shell
 oc new-project test-cert-utils
-oc apply -f ./test/sample-cert.yaml
+oc apply -f ./test/sample-cert.yaml -n test-cert-utils
 ```
 
 Test Routes
 
 ```shell
-oc apply -f ./test/routes.yaml
+oc apply -f ./test/routes.yaml -n test-cert-utils
 ```
 
 Test ca-injection
@@ -27,6 +27,6 @@ Test ca-injection
 oc apply -f ./test/validatingwebhookconfiguration.yaml
 oc apply -f ./test/mutatingwebhookconfiguration.yaml
 oc apply -f ./test/crd.yaml
-oc apply -f ./test/ca_injection_in_secret_configmap.yaml
+oc apply -f ./test/ca_injection_in_secret_configmap.yaml -n test-cert-utils
 oc apply -f ./test/apiservice.yaml
 ```

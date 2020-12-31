@@ -1,5 +1,5 @@
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: mwc
@@ -7,6 +7,9 @@ metadata:
     cert-utils-operator.redhat-cop.io/injectca-from-secret: test-cert-utils/test1
 webhooks:
 - name: mutaing.webhook.configuration
+  sideEffects: None
+  admissionReviewVersions:
+  - v1
   rules:
   - apiGroups:
     - "ciao"
@@ -20,27 +23,4 @@ webhooks:
   clientConfig:
     service:
       namespace: webhookns
-      name: webhook
----
-apiVersion: admissionregistration.k8s.io/v1beta1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: mwcs
-  annotations:
-    cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"
-webhooks:
-- name: mutaing.webhook.configuration
-  rules:
-  - apiGroups:
-    - "ciao"
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - ciaos
-    scope: "Namespaced"
-  clientConfig:
-    service:
-      namespace: webhookns
-      name: webhook        
+      name: webhook       

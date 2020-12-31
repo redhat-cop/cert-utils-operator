@@ -1,6 +1,8 @@
 # Cert-utils-operator
 
-[![Build Status](https://travis-ci.org/redhat-cop/cert-utils-operator.svg?branch=master)](https://travis-ci.org/redhat-cop/cert-utils-operator) [![Docker Repository on Quay](https://quay.io/repository/redhat-cop/cert-utils-operator/status "Docker Repository on Quay")](https://quay.io/repository/redhat-cop/cert-utils-operator)
+![build status](https://github.com/redhat-cop/cert-utils-operator/workflows/push/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/redhat-cop/cert-utils-operator)](https://goreportcard.com/report/github.com/redhat-cop/cert-utils-operator)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/redhat-cop/cert-utils-operator)
 
 Cert utils operator is a set of functionalities around certificates packaged in a [Kubernetes operator](https://github.com/operator-framework/operator-sdk).
 
@@ -20,21 +22,6 @@ The functionalities are the following:
 5. [Ability to inject ca bundles in Secrets, ConfigMaps, ValidatingWebhookConfiguration, MutatingWebhookConfiguration CustomResourceDefinition and APIService objects](#CA-injection)
 
 All these feature are activated via opt-in annotations.
-
-## Deploying the Operator
-
-This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
-Here are the instructions to install the latest release
-
-```shell
-oc new-project cert-utils-operator
-helm repo add cert-utils-operator https://redhat-cop.github.io/cert-utils-operator
-helm repo update
-export cert_utils_chart_version=$(helm search repo cert-utils-operator/cert-utils-operator | grep cert-utils-operator/cert-utils-operator | awk '{print $2}')
-helm fetch cert-utils-operator/cert-utils-operator --version ${cert_utils_chart_version}
-helm template cert-utils-operator-${cert_utils_chart_version}.tgz --namespace cert-utils-operator | oc apply -f - -n cert-utils-operator
-rm cert-utils-operator-${cert_utils_chart_version}.tgz
-```
 
 ## Populating route certificates
 
@@ -57,6 +44,7 @@ Note that the two annotations can point to different secrets.
 ## Creating java keystore and truststore
 
 ### Secrets
+
 This feature is activated with the following annotation on a `kubernetes.io/tls` secret: `cert-utils-operator.redhat-cop.io/generate-java-keystores: "true"`.
 
 When this annotation is set two more entries are added to the secret:
@@ -73,6 +61,7 @@ A such annotated secret looks like the following:
 The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
 
 ### ConfigMaps
+
 This feature is activated with the following annotation on a configmap: `cert-utils-operator.redhat-cop.io/generate-java-truststore: "true"`.
 
 When this annotation is the following entry is added to the configmap as binaryData:
@@ -128,11 +117,9 @@ Here is an example of a certificate soon-to-expiry event:
 
 This feature allows you to inject the ca bundle from either a `kubernetes.io/tls` secret or from the service_ca.crt file mounted in every pod. The latter is useful if you are protecting your webhook with a certificate generated with the [service service certificate secret](https://docs.openshift.com/container-platform/3.11/dev_guide/secrets.html#service-serving-certificate-secrets) feature.
 
-This feature is activated by the following annotations:
+This feature is activated by the following annotation:
 
 1. `cert-utils-operator.redhat-cop.io/injectca-from-secret: <secret namespace>/<secret name>`
-
-2. `cert-utils-operator.redhat-cop.io/injectca-from-service_ca: "true"`
 
 In addition to those objects, it is also possible to inject ca bundles from secrets to secrets and configmaps:
 
@@ -166,31 +153,120 @@ In addition to those objects, it is also possible to inject ca bundles from secr
 
 [Projected volumes](https://kubernetes.io/docs/concepts/storage/volumes/#projected) can be used to merge the caBundle with other pieces of configuration and or change the key name.
 
-## Local Development
+## Deploying the Operator
 
-Execute the following steps to develop the functionality locally. It is recommended that development be done using a cluster with `cluster-admin` permissions.
+This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
 
-Using the [operator-sdk](https://github.com/operator-framework/operator-sdk), run the operator locally:
+It is recommended to deploy this operator via [`OperatorHub`](https://operatorhub.io/), but you can also deploy it using [`Helm`](https://helm.sh/).
+
+### Deploying from OperatorHub
+
+If you want to utilize the Operator Lifecycle Manager (OLM) to install this operator, you can do so in two ways: from the UI or the CLI.
+
+#### Deploying from OperatorHub UI
+
+* If you would like to launch this operator from the UI, you'll need to navigate to the OperatorHub tab in the console. Before starting, make sure you've created the namespace that you want to install this operator to with the following:
 
 ```shell
 oc new-project cert-utils-operator
-oc apply -f deploy/service_account.yaml -n cert-utils-operator
-oc apply -f deploy/role.yaml -n cert-utils-operator
-oc apply -f deploy/role_binding.yaml -n cert-utils-operator
-export token=$(oc serviceaccounts get-token 'cert-utils-operator' -n cert-utils-operator)
-oc login --token=${token}
-OPERATOR_NAME="cert-utils-operator" operator-sdk run local --operator-flags "--systemCaFilename $(pwd)/README.md --zap-level=debug" --watch-namespace="" --verbose
 ```
 
-replace `$(pwd)/README.md` with a PEM-formatted CA if testing the CA injection functionality.
+* Once there, you can search for this operator by name: `cert utils operator`. This will then return an item for our operator and you can select it to get started. Once you've arrived here, you'll be presented with an option to install, which will begin the process.
+* After clicking the install button, you can then select the namespace that you would like to install this to as well as the installation strategy you would like to proceed with (`Automatic` or `Manual`).
+* Once you've made your selection, you can select `Subscribe` and the installation will begin. After a few moments you can go ahead and check your namespace and you should see the operator running.
 
-## Release Process
+![Cert Utils Operator](./media/cert-utils-operator.png)
 
-To release execute the following:
+#### Deploying from OperatorHub using CLI
+
+If you'd like to launch this operator from the command line, you can use the manifests contained in this repository by running the following:
+
+oc new-project cert-utils-operator
 
 ```shell
-git tag -a "<version>" -m "release <version>"
-git push upstream <version>
+oc apply -f config/operatorhub -n cert-utils-operator
 ```
 
-use this version format: vM.m.z
+This will create the appropriate OperatorGroup and Subscription and will trigger OLM to launch the operator in the specified namespace.
+
+### Deploying with Helm
+
+Here are the instructions to install the latest release with Helm.
+
+```shell
+oc new-project cert-utils-operator
+helm repo add cert-utils-operator https://redhat-cop.github.io/cert-utils-operator
+helm repo update
+helm install cert-utils-operator cert-utils-operator/cert-utils-operator
+```
+
+This can later be updated with the following commands:
+
+```shell
+helm repo update
+helm upgrade cert-utils-operator cert-utils-operator/cert-utils-operator
+```
+
+## Development
+
+## Running the operator locally
+
+```shell
+make manifests
+oc new-project cert-utils-operator-local
+kustomize build ./config/local-development | oc apply -f - -n cert-utils-operator-local
+export token=$(oc serviceaccounts get-token 'default' -n cert-utils-operator-local)
+oc login --token ${token}
+make run ENABLE_WEBHOOKS=false
+```
+
+## Building/Pushing the operator image
+
+```shell
+export repo=raffaelespazzoli #replace with yours
+make docker-build IMG=quay.io/$repo/cert-utils-operator:latest
+make docker-push IMG=quay.io/$repo/cert-utils-operator:latest
+```
+
+## Deploy to OLM via bundle
+
+```shell
+make manifests
+make bundle IMG=quay.io/$repo/cert-utils-operator:latest
+operator-sdk bundle validate ./bundle --select-optional name=operatorhub
+make bundle-build BUNDLE_IMG=quay.io/$repo/cert-utils-operator-bundle:latest
+podman push quay.io/$repo/cert-utils-operator-bundle:latest
+operator-sdk bundle validate quay.io/$repo/cert-utils-operator-bundle:latest --select-optional name=operatorhub
+oc new-project cert-utils-operator
+operator-sdk cleanup cert-utils-operator -n cert-utils-operator
+operator-sdk run bundle --install-mode AllNamespaces -n cert-utils-operator quay.io/$repo/cert-utils-operator-bundle:latest
+```
+
+## Releasing
+
+```shell
+git tag -a "<tagname>" -m "<commit message>"
+git push upstream <tagname>
+```
+
+If you need to remove a release:
+
+```shell
+git tag -d <tagname>
+git push upstream --delete <tagname>
+```
+
+If you need to "move" a release to the current main
+
+```shell
+git tag -f <tagname>
+git push upstream -f <tagname>
+```
+
+### Cleaning up
+
+```shell
+operator-sdk cleanup cert-utils-operator -n cert-utils-operator
+oc delete operatorgroup operator-sdk-og
+oc delete catalogsource cert-utils-operator-catalog
+```
