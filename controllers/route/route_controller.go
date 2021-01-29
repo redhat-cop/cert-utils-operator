@@ -233,9 +233,11 @@ func (e *enqueueRequestForReferecingRoutes) matchSecret(c client.Client, secret 
 	for _, route := range routeList.Items {
 		if secretName := route.GetAnnotations()[certAnnotation]; secretName == secret.Name && route.Spec.TLS != nil {
 			result = append(result, route)
+			continue
 		}
 		if secretName := route.GetAnnotations()[destCAAnnotation]; secretName == secret.Name && route.Spec.TLS != nil {
 			result = append(result, route)
+			continue
 		}
 	}
 	return result, nil
