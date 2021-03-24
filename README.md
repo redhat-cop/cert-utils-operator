@@ -15,26 +15,11 @@ By convention this type of secrets have three optional entries:
 
 The functionalities are the following:
 
-- [Cert-utils-operator](#cert-utils-operator)
-  - [Populating route certificates](#populating-route-certificates)
-  - [Creating java keystore and truststore](#creating-java-keystore-and-truststore)
-    - [Secrets](#secrets)
-    - [ConfigMaps](#configmaps)
-  - [Showing info on the certificates](#showing-info-on-the-certificates)
-  - [Alerting when a certificate is about to expire](#alerting-when-a-certificate-is-about-to-expire)
-  - [CA Injection](#ca-injection)
-  - [Deploying the Operator](#deploying-the-operator)
-    - [Deploying from OperatorHub](#deploying-from-operatorhub)
-      - [Deploying from OperatorHub UI](#deploying-from-operatorhub-ui)
-      - [Deploying from OperatorHub using CLI](#deploying-from-operatorhub-using-cli)
-    - [Deploying with Helm](#deploying-with-helm)
-  - [Development](#development)
-  - [Running the operator locally](#running-the-operator-locally)
-    - [Test helm chart locally](#test-helm-chart-locally)
-  - [Building/Pushing the operator image](#buildingpushing-the-operator-image)
-  - [Deploy to OLM via bundle](#deploy-to-olm-via-bundle)
-  - [Releasing](#releasing)
-    - [Cleaning up](#cleaning-up)
+1. [Ability to populate route certificates](#Populating-route-certificates)
+2. [Ability to create java keystore and truststore from the certificates](#Creating-java-keystore-and-truststore)
+3. [Ability to show info regarding the certificates](#Showing-info-on-the-certificates)
+4. [Ability to alert when a certificate is about to expire](#Alerting-when-a-certificate-is-about-to-expire)
+5. [Ability to inject ca bundles in Secrets, ConfigMaps, ValidatingWebhookConfiguration, MutatingWebhookConfiguration CustomResourceDefinition and APIService objects](#CA-injection)
 
 All these feature are activated via opt-in annotations.
 
