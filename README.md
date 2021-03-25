@@ -220,6 +220,29 @@ oc login --token ${token}
 make run ENABLE_WEBHOOKS=false
 ```
 
+### Test helm chart locally
+
+Define an image and tag. For example...
+
+```shell
+export imageRepository="quay.io/redhat-cop/cert-utils-operator"
+export imageTag="v1.0.2"
+```
+
+Deploy chart...
+
+```shell
+make helmchart IMG=${imageRepository} VERSION=${imageTag}
+helm upgrade -i cert-utils-operator-local charts/cert-utils-operator -n cert-utils-operator-local --create-namespace
+```
+
+Delete...
+
+```shell
+helm delete cert-utils-operator-local -n cert-utils-operator-local
+kubectl delete -f charts/cert-utils-operator/crds/crds.yaml
+```
+
 ## Building/Pushing the operator image
 
 ```shell
