@@ -7,6 +7,7 @@ metadata:
     categories: Security
     certified: "false"
     containerImage: quay.io/redhat-cop/cert-utils-operator
+    operatorframework.io/suggested-namespace: cert-utils-operator
     createdAt: 5/9/2020
     description: Set of utilities for TLS certificates
     repository: https://github.com/redhat-cop/cert-utils-operator

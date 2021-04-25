@@ -215,7 +215,7 @@ helm upgrade cert-utils-operator cert-utils-operator/cert-utils-operator
 make manifests
 oc new-project cert-utils-operator-local
 kustomize build ./config/local-development | oc apply -f - -n cert-utils-operator-local
-export token=$(oc serviceaccounts get-token 'default' -n cert-utils-operator-local)
+export token=$(oc serviceaccounts get-token 'cert-utils-operator-controller-manager' -n cert-utils-operator-local)
 oc login --token ${token}
 make run ENABLE_WEBHOOKS=false
 ```
@@ -226,7 +226,7 @@ Define an image and tag. For example...
 
 ```shell
 export imageRepository="quay.io/redhat-cop/cert-utils-operator"
-export imageTag="v1.0.2"
+export imageTag=$(git describe --tags --abbrev=0)" # grabs the most recent git tag, which should match the image tag
 ```
 
 Deploy chart...
