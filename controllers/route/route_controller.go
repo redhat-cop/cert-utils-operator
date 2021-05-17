@@ -24,6 +24,7 @@ import (
 
 const certAnnotation = util.AnnotationBase + "/certs-from-secret"
 const destCAAnnotation = util.AnnotationBase + "/destinationCA-from-secret"
+const injectCAAnnotation = util.AnnotationBase + "/inject-CA"
 
 // RouteCertificateReconciler reconciles a Namespace object
 type RouteCertificateReconciler struct {
@@ -303,10 +304,12 @@ func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) b
 				shouldUpdate = true
 			}
 		}
-		if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
-			if route.Spec.TLS.CACertificate != string(value) {
-				route.Spec.TLS.CACertificate = string(value)
-				shouldUpdate = true
+		if value, ok := route.Annotations[injectCAAnnotation]; ok && value != "false" {
+			if value, ok := secret.Data[util.CA]; ok && len(value) != 0 {
+				if route.Spec.TLS.CACertificate != string(value) {
+					route.Spec.TLS.CACertificate = string(value)
+					shouldUpdate = true
+				}
 			}
 		}
 	}
