@@ -35,6 +35,8 @@ The following fields of the route will be updated:
 2. `certificate` with the content of `tls.crt`.
 3. `caCertificate` with the content of `ca.crt`.
 
+It is possible to control whether the `caCertificate` field should be injected via the following annotations `cert-utils-operator.redhat-cop.io/inject-CA: "[true|false]"`. The default is `true`. This can be useful if the certificate also contains the ca in ca.crt in its certificate chain. In this case the OpenShift route validation will fail.
+
 The `destinationCACertificate` can also be injected. To activate this feature use the following annotation: `cert-utils-operator.redhat-cop.io/destinationCA-from-secret: "<secret-name>"`. The following field will be updated:
 
 1. `destinationCACertificate` with the content of `ca.crt`.
