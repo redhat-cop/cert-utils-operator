@@ -17,7 +17,7 @@ spec:
     {{- end }}
       labels:
         {{- include "cert-utils-operator.selectorLabels" . | nindent 8 }}
-        control-plane: controller-manager
+        operator: cert-utils-operator
     spec:
       serviceAccountName: cert-utils-operator-controller-manager
       {{- with .Values.imagePullSecrets }}
