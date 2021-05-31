@@ -155,6 +155,14 @@ In addition to those objects, it is also possible to inject ca bundles from secr
 
 [Projected volumes](https://kubernetes.io/docs/concepts/storage/volumes/#projected) can be used to merge the caBundle with other pieces of configuration and or change the key name.
 
+## Metrics
+
+Prometheus compatible metrics are exposed by the Operator and can be integrated into OpenShift's default cluster monitoring. To enable OpenShift cluster monitoring, label the namespace the operator is deployed in with the label `openshift.io/cluster-monitoring="true"`.
+
+```shell
+oc label namespace <namespace> openshift.io/cluster-monitoring="true"
+```
+
 ## Deploying the Operator
 
 This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
@@ -217,7 +225,7 @@ helm upgrade cert-utils-operator cert-utils-operator/cert-utils-operator
 make manifests
 oc new-project cert-utils-operator-local
 kustomize build ./config/local-development | oc apply -f - -n cert-utils-operator-local
-export token=$(oc serviceaccounts get-token 'cert-utils-operator-controller-manager' -n cert-utils-operator-local)
+export token=$(oc serviceaccounts get-token 'cert-utils-controller-manager' -n cert-utils-operator-local)
 oc login --token ${token}
 make run ENABLE_WEBHOOKS=false
 ```
@@ -249,6 +257,7 @@ kubectl delete -f charts/cert-utils-operator/crds/crds.yaml
 
 ```shell
 export repo=raffaelespazzoli #replace with yours
+docker login quay.io/$repo
 make docker-build IMG=quay.io/$repo/cert-utils-operator:latest
 make docker-push IMG=quay.io/$repo/cert-utils-operator:latest
 ```
@@ -260,11 +269,23 @@ make manifests
 make bundle IMG=quay.io/$repo/cert-utils-operator:latest
 operator-sdk bundle validate ./bundle --select-optional name=operatorhub
 make bundle-build BUNDLE_IMG=quay.io/$repo/cert-utils-operator-bundle:latest
-podman push quay.io/$repo/cert-utils-operator-bundle:latest
+docker push quay.io/$repo/cert-utils-operator-bundle:latest
 operator-sdk bundle validate quay.io/$repo/cert-utils-operator-bundle:latest --select-optional name=operatorhub
 oc new-project cert-utils-operator
+oc label namespace cert-utils-operator openshift.io/cluster-monitoring="true"
 operator-sdk cleanup cert-utils-operator -n cert-utils-operator
 operator-sdk run bundle --install-mode AllNamespaces -n cert-utils-operator quay.io/$repo/cert-utils-operator-bundle:latest
+```
+
+## Tesing
+
+### Testing metrics
+
+```sh
+export operatorNamespace=cert-utils-operator-local # or cert-utils-operator
+oc label namespace ${operatorNamespace} openshift.io/cluster-monitoring="true"
+oc rsh -n openshift-monitoring -c prometheus prometheus-k8s-0 /bin/bash
+curl -v -s -k -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://resource-locker-operator-controller-manager-metrics.${operatorNamespace}.svc.cluster.local:8443/metrics
 ```
 
 ## Releasing
