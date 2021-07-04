@@ -163,6 +163,17 @@ Prometheus compatible metrics are exposed by the Operator and can be integrated 
 oc label namespace <namespace> openshift.io/cluster-monitoring="true"
 ```
 
+### Testing metrics
+
+```sh
+export operatorNamespace=cert-utils-operator-local # or cert-utils-operator
+oc label namespace ${operatorNamespace} openshift.io/cluster-monitoring="true"
+oc rsh -n openshift-monitoring -c prometheus prometheus-k8s-0 /bin/bash
+export operatorNamespace=cert-utils-operator-local # or cert-utils-operator
+curl -v -s -k -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://cert-utils-operator-controller-manager-metrics.${operatorNamespace}.svc.cluster.local:8443/metrics
+exit
+```
+
 ## Deploying the Operator
 
 This is a cluster-level operator that you can deploy in any namespace, `cert-utils-operator` is recommended.
@@ -275,19 +286,6 @@ oc new-project cert-utils-operator
 oc label namespace cert-utils-operator openshift.io/cluster-monitoring="true"
 operator-sdk cleanup cert-utils-operator -n cert-utils-operator
 operator-sdk run bundle --install-mode AllNamespaces -n cert-utils-operator quay.io/$repo/cert-utils-operator-bundle:latest
-```
-
-## Tesing
-
-### Testing metrics
-
-```sh
-export operatorNamespace=cert-utils-operator-local # or cert-utils-operator
-oc label namespace ${operatorNamespace} openshift.io/cluster-monitoring="true"
-oc rsh -n openshift-monitoring -c prometheus prometheus-k8s-0 /bin/bash
-export operatorNamespace=cert-utils-operator-local # or cert-utils-operator
-curl -v -s -k -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://cert-utils-operator-controller-manager-metrics.${operatorNamespace}.svc.cluster.local:8443/metrics
-exit
 ```
 
 ## Releasing
