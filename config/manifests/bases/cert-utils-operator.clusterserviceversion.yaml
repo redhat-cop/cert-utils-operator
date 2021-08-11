@@ -12,6 +12,7 @@ metadata:
     operatorframework.io/suggested-namespace: cert-utils-operator
     repository: https://github.com/redhat-cop/cert-utils-operator
     support: Best Effort
+    operators.openshift.io/infrastructure-features: '["Disconnected"]'
   name: cert-utils-operator.v0.0.0
   namespace: placeholder
 spec:
