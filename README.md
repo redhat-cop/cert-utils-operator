@@ -180,6 +180,15 @@ This is a cluster-level operator that you can deploy in any namespace, `cert-uti
 
 It is recommended to deploy this operator via [`OperatorHub`](https://operatorhub.io/), but you can also deploy it using [`Helm`](https://helm.sh/).
 
+### Multiarch Support
+
+| Arch  | Support  |
+|:-:|:-:|
+| amd64  | &#x2611; |
+| arm64  | &#x2611;  |
+| ppc64le  | &#x2611;  |
+| s390x  | &#x2611;  |
+
 ### Deploying from OperatorHub
 
 > **Note**: This operator supports being installed disconnected environments
