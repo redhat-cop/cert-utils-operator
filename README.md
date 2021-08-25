@@ -184,10 +184,10 @@ It is recommended to deploy this operator via [`OperatorHub`](https://operatorhu
 
 | Arch  | Support  |
 |:-:|:-:|
-| amd64  | &#x2611; |
-| arm64  | &#x2611;  |
-| ppc64le  | &#x2611;  |
-| s390x  | &#x2611;  |
+| amd64  | ✅ |
+| arm64  | ✅  |
+| ppc64le  | ✅  |
+| s390x  | ❌  |
 
 ### Deploying from OperatorHub
 
