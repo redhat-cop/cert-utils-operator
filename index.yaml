@@ -2,8 +2,25 @@ apiVersion: v1
 entries:
   cert-utils-operator:
   - apiVersion: v1
+    appVersion: v1.2.0
+    created: "2021-08-28T14:12:52.176657073Z"
+    description: Helm chart that deploys cert-utils-operator
+    digest: 5931c7094fb64add5dd51cc696fad9a6bfd37e3bfa7c3a272c679bb20d5526c3
+    keywords:
+    - volume
+    - storage
+    - csi
+    - expansion
+    - monitoring
+    name: cert-utils-operator
+    sources:
+    - https://github.com/redhat-cop/cert-utils-operator
+    urls:
+    - https://redhat-cop.github.io/cert-utils-operator/cert-utils-operator/cert-utils-operator-v1.2.0.tgz
+    version: v1.2.0
+  - apiVersion: v1
     appVersion: v1.1.0
-    created: "2021-08-11T15:53:56.59992163Z"
+    created: "2021-08-28T14:12:52.176204069Z"
     description: Helm chart that deploys cert-utils-operator
     digest: faca540460bcce0772af4cd91572540d8cae472786f15a7b9e185f0b458adf89
     keywords:
@@ -20,7 +37,7 @@ entries:
     version: v1.1.0
   - apiVersion: v1
     appVersion: v1.0.7
-    created: "2021-08-11T15:53:56.599574928Z"
+    created: "2021-08-28T14:12:52.175786364Z"
     description: Helm chart that deploys cert-utils-operator
     digest: f67a910300afc13b3f40850727334d08fe6830a8bd67eda03a1b992a2c7d8921
     keywords:
@@ -37,7 +54,7 @@ entries:
     version: v1.0.7
   - apiVersion: v1
     appVersion: v1.0.6
-    created: "2021-08-11T15:53:56.599253826Z"
+    created: "2021-08-28T14:12:52.17539466Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 77bcafcae09ab5fe5293fd7b5f6f501eaa23c90b4b69d535406473b3eba6eac0
     keywords:
@@ -54,7 +71,7 @@ entries:
     version: v1.0.6
   - apiVersion: v1
     appVersion: v1.0.5
-    created: "2021-08-11T15:53:56.598951225Z"
+    created: "2021-08-28T14:12:52.175036656Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 2ed4731153d6bc2b5dd00033ba5e7f8b43894a9efa73d2024b5f7b2276d53449
     keywords:
@@ -71,7 +88,7 @@ entries:
     version: v1.0.5
   - apiVersion: v1
     appVersion: v1.0.4
-    created: "2021-08-11T15:53:56.598668023Z"
+    created: "2021-08-28T14:12:52.174722253Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 6c673a22e2807ae4bd55020d1a3b15c5dad0387e046740f60bb9c27211dc7c6f
     keywords:
@@ -88,7 +105,7 @@ entries:
     version: v1.0.4
   - apiVersion: v1
     appVersion: v1.0.3
-    created: "2021-08-11T15:53:56.598327921Z"
+    created: "2021-08-28T14:12:52.174392549Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 3063ed1e47b03213088e901d925fd8a21a014d56b970d30f7489a7fe7d0e6c92
     keywords:
@@ -105,7 +122,7 @@ entries:
     version: v1.0.3
   - apiVersion: v1
     appVersion: v1.0.2
-    created: "2021-08-11T15:53:56.597996719Z"
+    created: "2021-08-28T14:12:52.174038246Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 1da7d6524ae2e2fed72c45c20824d864a7a47f8140a38a137bc86fadc29050db
     keywords:
@@ -122,7 +139,7 @@ entries:
     version: v1.0.2
   - apiVersion: v1
     appVersion: v1.0.1
-    created: "2021-08-11T15:53:56.597362915Z"
+    created: "2021-08-28T14:12:52.173718242Z"
     description: Helm chart that deploys cert-utils-operator
     digest: c0d81f7ff1520a37bb890c3958ad5e3bf1843ca24e2b826b2ce79d365047b5f9
     keywords:
@@ -139,7 +156,7 @@ entries:
     version: v1.0.1
   - apiVersion: v1
     appVersion: v1.0.0
-    created: "2021-08-11T15:53:56.596920413Z"
+    created: "2021-08-28T14:12:52.173394239Z"
     description: Helm chart that deploys cert-utils-operator
     digest: aa566168fbe8c5594a2a121cebc4dc51c4510aecdf246249191e9b63d079169d
     keywords:
@@ -156,7 +173,7 @@ entries:
     version: v1.0.0
   - apiVersion: v1
     appVersion: v0.2.2
-    created: "2021-08-11T15:53:56.595892707Z"
+    created: "2021-08-28T14:12:52.173075335Z"
     description: Helm chart that deploys cert-utils-operator
     digest: d36c82862a52cae4f63ec4bd2dcd10a1ed995077004ea998699f107c4f5f0499
     keywords:
@@ -170,7 +187,7 @@ entries:
     version: v0.2.2
   - apiVersion: v1
     appVersion: v0.2.1
-    created: "2021-08-11T15:53:56.595525505Z"
+    created: "2021-08-28T14:12:52.172869033Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 403b7ceb211d85ef2ca543bc3a303b24e97cfad0cd7882cb4437532516abe0b1
     keywords:
@@ -184,7 +201,7 @@ entries:
     version: v0.2.1
   - apiVersion: v1
     appVersion: v0.2.0
-    created: "2021-08-11T15:53:56.595100902Z"
+    created: "2021-08-28T14:12:52.172667931Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 01dc43ee4a32a35df1dd625cc3976bd591dd288c8e87b42c5d73ace6af5db938
     keywords:
@@ -198,7 +215,7 @@ entries:
     version: v0.2.0
   - apiVersion: v1
     appVersion: v0.1.1
-    created: "2021-08-11T15:53:56.594914701Z"
+    created: "2021-08-28T14:12:52.172446529Z"
     description: Helm chart that deploys cert-utils-operator
     digest: e22200edf00e0494c5ab5ecd5717fc6f3b64d935e5b7a70e472e1a89a82be219
     keywords:
@@ -212,7 +229,7 @@ entries:
     version: v0.1.1
   - apiVersion: v1
     appVersion: v0.1.0
-    created: "2021-08-11T15:53:56.5947109Z"
+    created: "2021-08-28T14:12:52.172253027Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 2fef95c73d14cd758c8e15f575a3d587621d25675d1b7cab188ce35ebd08bc4b
     keywords:
@@ -226,7 +243,7 @@ entries:
     version: v0.1.0
   - apiVersion: v1
     appVersion: 0.1.0
-    created: "2021-08-11T15:53:56.594054096Z"
+    created: "2021-08-28T14:12:52.17161262Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 9602701f84c582ff76af0c76c5b58b686ca53b94c10fba82e498be078749e5dd
     keywords:
@@ -240,7 +257,7 @@ entries:
     version: 0.1.0
   - apiVersion: v1
     appVersion: v0.0.3
-    created: "2021-08-11T15:53:56.594499699Z"
+    created: "2021-08-28T14:12:52.172045225Z"
     description: Helm chart that deploys cert-utils-operator
     digest: 08656d0cb2399ee45e8a6aaa881301c1b675055cb3b2596250c7cdca55f8b4cf
     keywords:
@@ -254,7 +271,7 @@ entries:
     version: v0.0.3
   - apiVersion: v1
     appVersion: v0.0.2
-    created: "2021-08-11T15:53:56.594285498Z"
+    created: "2021-08-28T14:12:52.171810822Z"
     description: Helm chart that deploys cert-utils-operator
     digest: ab5f447d7225db537b725a98234d271dd2298983db457ae941c173b5eff39fba
     keywords:
@@ -268,7 +285,7 @@ entries:
     version: v0.0.2
   - apiVersion: v1
     appVersion: 0.0.1
-    created: "2021-08-11T15:53:56.593773095Z"
+    created: "2021-08-28T14:12:52.171374217Z"
     description: Helm chart that deploys cert-utils-operator
     digest: e7935eab7ed51a8a00c9f72667303d88f49013a167f1b838d1327afb6f8c76c8
     keywords:
@@ -280,4 +297,4 @@ entries:
     urls:
     - https://redhat-cop.github.io/cert-utils-operator/cert-utils-operator/cert-utils-operator-0.0.1.tgz
     version: 0.0.1
-generated: "2021-08-11T15:53:56.593388292Z"
+generated: "2021-08-28T14:12:52.171037314Z"
