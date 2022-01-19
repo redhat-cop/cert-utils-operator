@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,8 +55,8 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if newSecret.Type != util.TLSSecret {
 				return false
 			}
-			oldValue, _ := e.ObjectOld.GetAnnotations()[javaKeyStoresAnnotation]
-			newValue, _ := e.ObjectNew.GetAnnotations()[javaKeyStoresAnnotation]
+			oldValue := e.ObjectOld.GetAnnotations()[javaKeyStoresAnnotation]
+			newValue := e.ObjectNew.GetAnnotations()[javaKeyStoresAnnotation]
 			old := oldValue == "true"
 			new := newValue == "true"
 			// if the content has changed we trigger is the annotation is there
@@ -75,8 +76,12 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if secret.Type != util.TLSSecret {
 				return false
 			}
-			value, _ := e.Object.GetAnnotations()[javaKeyStoresAnnotation]
-			return value == "true"
+			value := e.Object.GetAnnotations()[javaKeyStoresAnnotation]
+			_, okCert := secret.Data[util.Cert]
+			_, okCa := secret.Data[util.CA]
+			_, okTrustStore := secret.Data[truststoreName]
+			_, okKeyStore := secret.Data[keystoreName]
+			return value == "true" && (okCa && !okTrustStore) || (okCert && !okKeyStore)
 		},
 	}
 
@@ -109,7 +114,7 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	value, _ := instance.GetAnnotations()[javaKeyStoresAnnotation]
+	value := instance.GetAnnotations()[javaKeyStoresAnnotation]
 	if value == "true" {
 		if value, ok := instance.Data[util.Cert]; ok && len(value) != 0 {
 			if value, ok := instance.Data[util.Key]; ok && len(value) != 0 {
@@ -134,9 +139,11 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 		delete(instance.Data, truststoreName)
 	}
 
-	err = r.GetClient().Update(context, instance)
+	client.StrategicMergeFrom(instance)
+
+	err = r.GetClient().Patch(context, instance, client.StrategicMergeFrom(instance))
 	if err != nil {
-		log.Error(err, "unable to update secrer", "secret", instance.GetName())
+		log.Error(err, "unable to update secret", "secret", instance.GetName())
 		return r.ManageError(context, instance, err)
 	}
 
