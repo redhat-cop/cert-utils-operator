@@ -3,7 +3,6 @@ package secrettokeystore
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"reflect"
@@ -61,14 +60,7 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			newValue := e.ObjectNew.GetAnnotations()[javaKeyStoresAnnotation]
 			old := oldValue == "true"
 			new := newValue == "true"
-			r.Log.V(1).Info("conditions", "one", reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]),
-				"two", reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]),
-				"three", reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]),
-				"four", reflect.DeepEqual(newSecret.Data[keystoreName], oldSecret.Data[keystoreName]),
-				"five", reflect.DeepEqual(newSecret.Data[truststoreName], oldSecret.Data[truststoreName]))
-			r.Log.V(1).Info("truststore", "new", base64.StdEncoding.EncodeToString([]byte(newSecret.Data[truststoreName])), "old", base64.StdEncoding.EncodeToString([]byte(oldSecret.Data[truststoreName])))
-			r.Log.V(1).Info("keystore", "new", base64.StdEncoding.EncodeToString([]byte(newSecret.Data[keystoreName])), "old", base64.StdEncoding.EncodeToString([]byte(oldSecret.Data[keystoreName])))
-			// if the content has changed we trigger is the annotation is there
+			// if the content has changed we trigger if the annotation is present
 			if !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) ||
 				!reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]) ||
 				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]) ||
