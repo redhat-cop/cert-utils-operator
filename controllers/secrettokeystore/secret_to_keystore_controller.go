@@ -3,6 +3,7 @@ package secrettokeystore
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"reflect"
@@ -11,15 +12,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	keystore "github.com/pavel-v-chernykh/keystore-go"
+	keystore "github.com/pavel-v-chernykh/keystore-go/v4"
 	"github.com/redhat-cop/cert-utils-operator/controllers/util"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/scylladb/go-set/strset"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -27,6 +28,7 @@ import (
 
 const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
+const storesCreationTiemstamp = util.AnnotationBase + "/java-keystores-creation-timestamp"
 const defaultpassword = "changeme"
 const keystoreName = "keystore.jks"
 const truststoreName = "truststore.jks"
@@ -59,10 +61,19 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			newValue := e.ObjectNew.GetAnnotations()[javaKeyStoresAnnotation]
 			old := oldValue == "true"
 			new := newValue == "true"
+			r.Log.V(1).Info("conditions", "one", reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]),
+				"two", reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]),
+				"three", reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]),
+				"four", reflect.DeepEqual(newSecret.Data[keystoreName], oldSecret.Data[keystoreName]),
+				"five", reflect.DeepEqual(newSecret.Data[truststoreName], oldSecret.Data[truststoreName]))
+			r.Log.V(1).Info("truststore", "new", base64.StdEncoding.EncodeToString([]byte(newSecret.Data[truststoreName])), "old", base64.StdEncoding.EncodeToString([]byte(oldSecret.Data[truststoreName])))
+			r.Log.V(1).Info("keystore", "new", base64.StdEncoding.EncodeToString([]byte(newSecret.Data[keystoreName])), "old", base64.StdEncoding.EncodeToString([]byte(oldSecret.Data[keystoreName])))
 			// if the content has changed we trigger is the annotation is there
 			if !reflect.DeepEqual(newSecret.Data[util.Cert], oldSecret.Data[util.Cert]) ||
 				!reflect.DeepEqual(newSecret.Data[util.Key], oldSecret.Data[util.Key]) ||
-				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]) {
+				!reflect.DeepEqual(newSecret.Data[util.CA], oldSecret.Data[util.CA]) ||
+				!reflect.DeepEqual(newSecret.Data[keystoreName], oldSecret.Data[keystoreName]) ||
+				!reflect.DeepEqual(newSecret.Data[truststoreName], oldSecret.Data[truststoreName]) {
 				return new
 			}
 			// otherwise we trigger if the annotation has changed
@@ -77,11 +88,7 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return false
 			}
 			value := e.Object.GetAnnotations()[javaKeyStoresAnnotation]
-			_, okCert := secret.Data[util.Cert]
-			_, okCa := secret.Data[util.CA]
-			_, okTrustStore := secret.Data[truststoreName]
-			_, okKeyStore := secret.Data[keystoreName]
-			return value == "true" && (okCa && !okTrustStore) || (okCert && !okKeyStore)
+			return value == "true"
 		},
 	}
 
@@ -114,6 +121,7 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	//orig_instance := instance.DeepCopy()
 	value := instance.GetAnnotations()[javaKeyStoresAnnotation]
 	if value == "true" {
 		if value, ok := instance.Data[util.Cert]; ok && len(value) != 0 {
@@ -123,7 +131,13 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 					log.Error(err, "unable to create keystore from secret", "secret", instance.Namespace+"/"+instance.Name)
 					return reconcile.Result{}, err
 				}
-				instance.Data[keystoreName] = keyStore
+				if oldKeyStoreB, ok := instance.Data[keystoreName]; ok {
+					if !compareKeyStoreBinary(oldKeyStoreB, keyStore, []byte(getPassword(instance)), r.Log) {
+						instance.Data[keystoreName] = keyStore
+					}
+				} else {
+					instance.Data[keystoreName] = keyStore
+				}
 			}
 		}
 		if value, ok := instance.Data[util.CA]; ok && len(value) != 0 {
@@ -132,6 +146,11 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 				log.Error(err, "unable to create truststore from secret", "secret", instance.Namespace+"/"+instance.Name)
 				return reconcile.Result{}, err
 			}
+			if oldTrustStoreB, ok := instance.Data[truststoreName]; ok {
+				if !compareKeyStoreBinary(oldTrustStoreB, trustStore, []byte(getPassword(instance)), r.Log) {
+					instance.Data[truststoreName] = trustStore
+				}
+			}
 			instance.Data[truststoreName] = trustStore
 		}
 	} else {
@@ -139,9 +158,11 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 		delete(instance.Data, truststoreName)
 	}
 
-	client.StrategicMergeFrom(instance)
-
-	err = r.GetClient().Patch(context, instance, client.StrategicMergeFrom(instance))
+	//client.StrategicMergeFrom(orig_instance)
+	//log.V(1).Info("about to patch object", "data len", len(instance.Data), "orig data len", len(orig_instance.Data))
+	//err = r.GetClient().Patch(context, instance, client.StrategicMergeFrom(instance))
+	log.V(1).Info("updating with", "instance", instance, "key len", len(instance.Data), "resource version", instance.GetResourceVersion())
+	err = r.GetClient().Update(context, instance)
 	if err != nil {
 		log.Error(err, "unable to update secret", "secret", instance.GetName())
 		return r.ManageError(context, instance, err)
@@ -150,8 +171,71 @@ func (r *SecretToKeyStoreReconciler) Reconcile(context context.Context, req ctrl
 	return r.ManageSuccess(context, instance)
 }
 
+func compareKeyStoreBinary(a, b, password []byte, flog logr.Logger) bool {
+	aKeyStore := keystore.New()
+	err := aKeyStore.Load(bytes.NewReader(a), password)
+	if err != nil {
+		flog.Error(err, "unable to load", "keystore")
+		return false
+	}
+	bKeyStore := keystore.New()
+	err = bKeyStore.Load(bytes.NewReader(b), password)
+	if err != nil {
+		flog.Error(err, "unable to load", "keystore")
+		return false
+	}
+	return compareKeyStore(aKeyStore, bKeyStore, flog)
+}
+
+func compareKeyStore(a, b keystore.KeyStore, flog logr.Logger) bool {
+	aliasesASet := strset.New(a.Aliases()...)
+	aleasesBSet := strset.New(b.Aliases()...)
+	if !aliasesASet.IsEqual(aleasesBSet) {
+		return false
+	}
+	for _, alias := range a.Aliases() {
+		if a.IsTrustedCertificateEntry(alias) {
+			if !b.IsTrustedCertificateEntry(alias) {
+				return false
+			}
+			TCEA, err := a.GetTrustedCertificateEntry(alias)
+			if err != nil {
+				flog.Error(err, "unable to get trusted cert entry for", "alias", alias)
+				return false
+			}
+			TCEB, err := b.GetTrustedCertificateEntry(alias)
+			if err != nil {
+				flog.Error(err, "unable to get trusted cert entry for", "alias", alias)
+				return false
+			}
+			if !reflect.DeepEqual(TCEA, TCEB) {
+				return false
+			}
+		}
+		if a.IsPrivateKeyEntry(alias) {
+			if !b.IsPrivateKeyEntry(alias) {
+				return false
+			}
+			PKEA, err := a.GetPrivateKeyEntry(alias, []byte{})
+			if err != nil {
+				flog.Error(err, "unable to get private key entry for", "alias", alias)
+				return false
+			}
+			PKEB, err := b.GetPrivateKeyEntry(alias, []byte{})
+			if err != nil {
+				flog.Error(err, "unable to get private key entry for", "alias", alias)
+				return false
+			}
+			if !reflect.DeepEqual(PKEA, PKEB) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (r *SecretToKeyStoreReconciler) getKeyStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
-	keyStore := keystore.KeyStore{}
+	keyStore := keystore.New()
 	key, ok := secret.Data[util.Key]
 	if !ok {
 		return []byte{}, errors.New("tls.key not found")
@@ -175,47 +259,65 @@ func (r *SecretToKeyStoreReconciler) getKeyStoreFromSecret(secret *corev1.Secret
 		return []byte{}, errors.New("private key block not of type PRIVATE KEY")
 	}
 
-	keyStore["alias"] = &keystore.PrivateKeyEntry{
-		Entry: keystore.Entry{
-			CreationDate: time.Now(),
-		},
-		PrivKey:   p.Bytes,
-		CertChain: certs,
-	}
-	buffer := bytes.Buffer{}
-	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(secret)))
+	creationTime, err := r.getCreationTimestamp(secret)
 	if err != nil {
-		r.Log.Error(err, "unable to encode keystore", "keystore", keyStore)
+		r.Log.Error(err, "unable to retrieve creation time")
+		return []byte{}, err
+	}
+	r.Log.Info("retrieved", "creation time", creationTime)
+
+	err = keyStore.SetPrivateKeyEntry("alias", keystore.PrivateKeyEntry{
+		CreationTime:     creationTime,
+		PrivateKey:       p.Bytes,
+		CertificateChain: certs,
+	}, []byte{})
+
+	if err != nil {
+		r.Log.Error(err, "unable to set private key entry")
+		return []byte{}, err
+	}
+
+	buffer := bytes.Buffer{}
+	err = keyStore.Store(&buffer, []byte(getPassword(secret)))
+	if err != nil {
+		r.Log.Error(err, "unable to encode", "keystore", keyStore)
 		return []byte{}, err
 	}
 	return buffer.Bytes(), nil
 }
 
 func (r *SecretToKeyStoreReconciler) getTrustStoreFromSecret(secret *corev1.Secret) ([]byte, error) {
-	keyStore := keystore.KeyStore{}
+	keyStore := keystore.New()
 	ca, ok := secret.Data[util.CA]
 	if !ok {
 		return []byte{}, errors.New("ca bundle key not found: ca.crt")
 	}
+	creationTime, err := r.getCreationTimestamp(secret)
+	if err != nil {
+		r.Log.Error(err, "unable to retrieve creation time")
+		return []byte{}, err
+	}
+	r.Log.Info("retrieved", "creation time", creationTime)
 	i := 0
 	for p, rest := pem.Decode(ca); p != nil; p, rest = pem.Decode(rest) {
-		keyStore["alias"+strconv.Itoa(i)] = &keystore.TrustedCertificateEntry{
-			Entry: keystore.Entry{
-				CreationDate: time.Now(),
-			},
+		err := keyStore.SetTrustedCertificateEntry("alias"+strconv.Itoa(i), keystore.TrustedCertificateEntry{
+			CreationTime: creationTime,
 			Certificate: keystore.Certificate{
 				Type:    "X.509",
 				Content: p.Bytes,
 			},
+		})
+		if err != nil {
+			r.Log.Error(err, "unable to set trusted certifciate entry")
+			return []byte{}, err
 		}
-
 		// increment counter
 		i++
 	}
 	buffer := bytes.Buffer{}
-	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(secret)))
+	err = keyStore.Store(&buffer, []byte(getPassword(secret)))
 	if err != nil {
-		r.Log.Error(err, "unable to encode keystore", "keystore", keyStore)
+		r.Log.Error(err, "unable to encode ", "truststore", keyStore)
 		return []byte{}, err
 	}
 	return buffer.Bytes(), nil
@@ -226,4 +328,20 @@ func getPassword(secret *corev1.Secret) string {
 		return pwd
 	}
 	return defaultpassword
+}
+
+func (r *SecretToKeyStoreReconciler) getCreationTimestamp(secret *corev1.Secret) (time.Time, error) {
+
+	if timeStr, ok := secret.GetAnnotations()[storesCreationTiemstamp]; ok {
+		creationTime, err := time.Parse(time.RFC3339, timeStr)
+		if err != nil {
+			r.Log.Error(err, "unable to parse creation time")
+			return time.Time{}, err
+		}
+		return creationTime, nil
+	} else {
+		now := time.Now()
+		secret.GetAnnotations()[storesCreationTiemstamp] = now.Format(time.RFC3339)
+		return now, nil
+	}
 }
