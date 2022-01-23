@@ -10,16 +10,17 @@ metadata:
     createdAt: 5/9/2020
     description: Set of utilities for TLS certificates
     operatorframework.io/suggested-namespace: cert-utils-operator
+    operators.openshift.io/infrastructure-features: '["Disconnected"]'
     repository: https://github.com/redhat-cop/cert-utils-operator
     support: Best Effort
-    operators.openshift.io/infrastructure-features: '["Disconnected"]'
-  name: cert-utils-operator.v0.0.0
-  namespace: placeholder
   labels:
-    operatorframework.io/os.linux: supported
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/os.linux: supported
+  name: cert-utils-operator.v0.0.0
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions: {}
