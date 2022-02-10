@@ -262,7 +262,7 @@ func (r *SecretToKeyStoreReconciler) getKeyStoreFromSecret(secret *corev1.Secret
 		CreationTime:     creationTime,
 		PrivateKey:       p.Bytes,
 		CertificateChain: certs,
-	}, []byte{})
+	}, []byte(getPassword(secret)))
 
 	if err != nil {
 		r.Log.Error(err, "unable to set private key entry")
