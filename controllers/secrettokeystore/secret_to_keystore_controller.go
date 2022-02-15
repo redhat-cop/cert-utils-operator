@@ -167,13 +167,13 @@ func compareKeyStoreBinary(a, b, password []byte, flog logr.Logger) bool {
 	aKeyStore := keystore.New()
 	err := aKeyStore.Load(bytes.NewReader(a), password)
 	if err != nil {
-		flog.Error(err, "unable to load", "keystore")
+		flog.Error(err, "unable to loadkeystore")
 		return false
 	}
 	bKeyStore := keystore.New()
 	err = bKeyStore.Load(bytes.NewReader(b), password)
 	if err != nil {
-		flog.Error(err, "unable to load", "keystore")
+		flog.Error(err, "unable to loadkeystore")
 		return false
 	}
 	return compareKeyStore(aKeyStore, bKeyStore, flog)
