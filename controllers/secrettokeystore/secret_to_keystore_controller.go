@@ -176,10 +176,10 @@ func compareKeyStoreBinary(a, b, password []byte, flog logr.Logger) bool {
 		flog.Error(err, "unable to loadkeystore")
 		return false
 	}
-	return compareKeyStore(aKeyStore, bKeyStore, flog)
+	return compareKeyStore(aKeyStore, bKeyStore, password, flog)
 }
 
-func compareKeyStore(a, b keystore.KeyStore, flog logr.Logger) bool {
+func compareKeyStore(a, b keystore.KeyStore, password []byte, flog logr.Logger) bool {
 	aliasesASet := strset.New(a.Aliases()...)
 	aleasesBSet := strset.New(b.Aliases()...)
 	if !aliasesASet.IsEqual(aleasesBSet) {
@@ -208,12 +208,12 @@ func compareKeyStore(a, b keystore.KeyStore, flog logr.Logger) bool {
 			if !b.IsPrivateKeyEntry(alias) {
 				return false
 			}
-			PKEA, err := a.GetPrivateKeyEntry(alias, []byte{})
+			PKEA, err := a.GetPrivateKeyEntry(alias, password)
 			if err != nil {
 				flog.Error(err, "unable to get private key entry for", "alias", alias)
 				return false
 			}
-			PKEB, err := b.GetPrivateKeyEntry(alias, []byte{})
+			PKEB, err := b.GetPrivateKeyEntry(alias, password)
 			if err != nil {
 				flog.Error(err, "unable to get private key entry for", "alias", alias)
 				return false
