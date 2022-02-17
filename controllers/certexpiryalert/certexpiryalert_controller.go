@@ -70,6 +70,11 @@ func init() {
 	metrics.Registry.MustRegister(issueTime, expiryTime)
 }
 
+func deleteMetrics(ctx context.Context, secret *corev1.Secret) {
+	issueTime.DeleteLabelValues(secret.Name, secret.Namespace)
+	expiryTime.DeleteLabelValues(secret.Name, secret.Namespace)
+}
+
 func updateMetrics(ctx context.Context, secret *corev1.Secret) {
 	creation, expiry := getCreationAndExpiry(ctx, secret)
 	creationGauge := issueTime.WithLabelValues(secret.Name, secret.Namespace)
@@ -119,6 +124,17 @@ func (r *CertExpiryAlertReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			updateMetrics(ctx, secret)
 			value, _ := e.Object.GetAnnotations()[certExpiryAlertAnnotation]
 			return value == "true"
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			if secret.Type != util.TLSSecret {
+				return false
+			}
+			deleteMetrics(ctx, secret)
+			return false
 		},
 	}
 
