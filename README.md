@@ -113,6 +113,17 @@ Here is an example of a certificate soon-to-expiry event:
 
 ![cert-expiry](media/cert-expiry.png)
 
+In addition to this, This operator generates the following metrics for al TLS certificates:
+
+| Metric Name | Descrption |
+|:-:|:-:|
+| certutils_certificate_issue_time | time at which the certificate was created in seconds from from January 1, 1970 UTC |
+| certutils_certificate_expiry_time | time at which the certificate expires in seconds from from January 1, 1970 UTC |
+| cert:validity_duration:sec | duration of the certificate validity in seconds |
+| cert:time_to_expiration:sec | time left to expiration in seconds |
+
+The operator also sets two alerts that fire respectively when a certificate has 15% and 5% left of its lifetime.
+
 ## CA Injection
 
 [ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [MutatingWebhokConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) [CustomResourceDefinition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) and [APIService](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) types of objects (and possibly in the future others) need the master API process to connect to trusted servers to perform their function. In order to do so over an encrypted connection, a CA bundle needs to be configured. In these objects the CA bundle is passed as part of the CR and not as a secret, and that is fine because the CA bundles are public info. However it may be difficult at deploy time to know what the correct CA bundle should be. Often the CA bundle needs to be discovered as a piece on information owned by some other objects of the cluster.
@@ -187,7 +198,7 @@ It is recommended to deploy this operator via [`OperatorHub`](https://operatorhu
 | amd64  | ✅ |
 | arm64  | ✅  |
 | ppc64le  | ✅  |
-| s390x  | ❌  |
+| s390x  | ✅  |
 
 ### Deploying from OperatorHub
 
@@ -244,12 +255,13 @@ helm upgrade cert-utils-operator cert-utils-operator/cert-utils-operator
 ## Running the operator locally
 
 ```shell
-make manifests
-oc new-project cert-utils-operator-local
-kustomize build ./config/local-development | oc apply -f - -n cert-utils-operator-local
-export token=$(oc serviceaccounts get-token 'cert-utils-controller-manager' -n cert-utils-operator-local)
-oc login --token ${token}
-make run ENABLE_WEBHOOKS=false
+export repo=raffaelespazzoli
+docker login quay.io/$repo
+oc new-project cert-utils-operator
+oc project cert-utils-operator
+oc label namespace cert-utils-operator openshift.io/cluster-monitoring="true"
+envsubst < config/local-development/tilt/env-replace-image.yaml > config/local-development/tilt/replace-image.yaml
+tilt up
 ```
 
 ### Test helm chart locally

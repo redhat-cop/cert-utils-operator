@@ -5,10 +5,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redhat-cop/cert-utils-operator/controllers/util"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +19,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -42,10 +46,43 @@ type CertExpiryAlertReconciler struct {
 	controllerName string
 }
 
+var (
+	issueTime = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Subsystem: "certutils",
+			Name:      "certificate_issue_time",
+			Help:      "time at which the certificate was issued in number of seconds from January 1, 1970 UTC",
+		},
+		[]string{"name", "namespace"},
+	)
+	expiryTime = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Subsystem: "certutils",
+			Name:      "certificate_expiry_time",
+			Help:      "time at which the certificate expires in number of seconds from January 1, 1970 UTC",
+		},
+		[]string{"name", "namespace"},
+	)
+)
+
+func init() {
+	// Register custom metrics with the global prometheus registry
+	metrics.Registry.MustRegister(issueTime, expiryTime)
+}
+
+func updateMetrics(ctx context.Context, secret *corev1.Secret) {
+	creation, expiry := getCreationAndExpiry(ctx, secret)
+	creationGauge := issueTime.WithLabelValues(secret.Name, secret.Namespace)
+	expiryGauge := expiryTime.WithLabelValues(secret.Name, secret.Namespace)
+	creationGauge.Set(float64(creation.Unix()))
+	expiryGauge.Set(float64(expiry.Unix()))
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *CertExpiryAlertReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "certexpiryalert_controller"
-
+	ctx := context.TODO()
+	ctx = log.IntoContext(ctx, r.Log)
 	isAnnotatedSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
@@ -59,6 +96,7 @@ func (r *CertExpiryAlertReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if newSecret.Type != util.TLSSecret {
 				return false
 			}
+			updateMetrics(ctx, newSecret)
 			oldValue, _ := e.ObjectOld.GetAnnotations()[certExpiryAlertAnnotation]
 			newValue, _ := e.ObjectNew.GetAnnotations()[certExpiryAlertAnnotation]
 			old := oldValue == "true"
@@ -78,6 +116,7 @@ func (r *CertExpiryAlertReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if secret.Type != util.TLSSecret {
 				return false
 			}
+			updateMetrics(ctx, secret)
 			value, _ := e.Object.GetAnnotations()[certExpiryAlertAnnotation]
 			return value == "true"
 		},
@@ -139,6 +178,22 @@ func (r *CertExpiryAlertReconciler) Reconcile(context context.Context, req ctrl.
 
 }
 
+func getCreationAndExpiry(ctx context.Context, secret *corev1.Secret) (time.Time, time.Time) {
+	ilog := log.FromContext(ctx)
+	creation := time.Unix(1, 0)
+	expiry := time.Unix(math.MaxInt32, 0)
+	for p, rest := pem.Decode(secret.Data[util.Cert]); p != nil; p, rest = pem.Decode(rest) {
+		cert, err := x509.ParseCertificate(p.Bytes)
+		if err != nil {
+			ilog.Error(err, "unable to decode this entry, skipping", "entry", string(p.Bytes))
+			continue
+		}
+		expiry = min(expiry, cert.NotAfter)
+		creation = max(creation, cert.NotBefore)
+	}
+	return creation, expiry
+}
+
 func (r *CertExpiryAlertReconciler) getExpiry(secret *corev1.Secret) time.Time {
 	result := time.Time{}
 	for p, rest := pem.Decode(secret.Data[util.Cert]); p != nil; p, rest = pem.Decode(rest) {
@@ -158,6 +213,13 @@ func (r *CertExpiryAlertReconciler) getExpiry(secret *corev1.Secret) time.Time {
 
 func min(a time.Time, b time.Time) time.Time {
 	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+func max(a time.Time, b time.Time) time.Time {
+	if a.After(b) {
 		return a
 	}
 	return b

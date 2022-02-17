@@ -1,5 +1,8 @@
 resources:
 - monitor.yaml
+- role.yaml
+- rolebinding.yaml
+- rules.yaml
 
 configurations:
 - kustomizeconfig.yaml

@@ -1,0 +1,19 @@
+# Adds namespace to all resources.
+namespace: cert-utils-operator
+
+# Labels to add to all resources and selectors.
+#commonLabels:
+#  someName: someValue
+
+bases:
+- ../../default
+- ./service-account.yaml
+
+
+patchesJson6902:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: cert-utils-operator-controller-manager
+  path: ./replace-image.yaml       
