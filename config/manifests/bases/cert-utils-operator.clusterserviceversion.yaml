@@ -11,6 +11,7 @@ metadata:
     description: Set of utilities for TLS certificates
     operatorframework.io/suggested-namespace: cert-utils-operator
     operators.openshift.io/infrastructure-features: '["Disconnected"]'
+    operatorframework.io/cluster-monitoring: "true"
     repository: https://github.com/redhat-cop/cert-utils-operator
     support: Best Effort
   labels:
