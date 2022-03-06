@@ -19,7 +19,7 @@ spec:
         {{- include "cert-utils-operator.selectorLabels" . | nindent 8 }}
         operator: cert-utils-operator
     spec:
-      serviceAccountName: cert-utils-operator-controller-manager
+      serviceAccountName: controller-manager
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
