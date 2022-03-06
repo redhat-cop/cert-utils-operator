@@ -99,16 +99,16 @@ This operator can generate Prometheus alerts and/or Kubernetes events when a cer
 
 ### Generating prometheus alerts
 
-Prometheus alerts are generated for all certificates. In order for the certifciate metrics to be collected and the alerts be generated the Prometheus CRs deployed with this operator must be honored by a [Prometheus operator](https://github.com/prometheus-operator/prometheus-operator). If you are running on OpenShift just add the label `https://github.com/prometheus-operator/prometheus-operator` to the namespace containing the operator.
+Prometheus alerts are generated for all certificates. In order for the certifciate metrics to be collected and the alerts be generated the Prometheus CRs deployed with this operator must be honored by a [Prometheus operator](https://github.com/prometheus-operator/prometheus-operator). If you are running on OpenShift just add the label ``openshift.io/cluster-monitoring="true"`` to the namespace containing the operator.
 
 The following metrics will be collected for every tls secret:
 
 | Metric Name | Description |
 |:-:|:-:|
-| certutils_certificate_issue_time | time at which the certificate was created in seconds from from January 1, 1970 UTC |
-| certutils_certificate_expiry_time | time at which the certificate expires in seconds from from January 1, 1970 UTC |
-| cert:validity_duration:sec | duration of the certificate validity in seconds |
-| cert:time_to_expiration:sec | time left to expiration in seconds |
+| `certutils_certificate_issue_time` | time at which the certificate was created in seconds from from January 1, 1970 UTC |
+| `certutils_certificate_expiry_time` | time at which the certificate expires in seconds from from January 1, 1970 UTC |
+| `cert:validity_duration:sec` | duration of the certificate validity in seconds |
+| `cert:time_to_expiration:sec` | time left to expiration in seconds |
 
 Alerts will be generated at 85% and 95% of the certifciate lifetime.
 Alerts are generated for all certificates including certifciate that are possibly automatically rotated. This is intentional as the automation that rotates the certificates may be non-functioning.
