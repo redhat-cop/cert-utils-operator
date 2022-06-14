@@ -49,12 +49,12 @@ vars:
   objref:
     kind: Service
     version: v1
-    name: controller-manager-metrics-service
+    name: cert-utils-operator-controller-manager-metrics-service
 - name: METRICS_SERVICE_NAMESPACE
   objref:
     kind: Service
     version: v1
-    name: controller-manager-metrics-service
+    name: cert-utils-operator-controller-manager-metrics-service
   fieldref:
     fieldpath: metadata.namespace
 - name: ROLE_NAME
