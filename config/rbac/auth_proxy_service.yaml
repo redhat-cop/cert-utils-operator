@@ -5,7 +5,7 @@ metadata:
     control-plane: cert-utils-operator
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: cert-utils-operator-certs
-  name: controller-manager-metrics-service
+  name: cert-utils-operator-controller-manager-metrics-service
   namespace: system
 spec:
   ports:
