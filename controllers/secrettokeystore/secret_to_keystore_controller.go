@@ -27,7 +27,8 @@ import (
 
 const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
-const storesCreationTiemstamp = util.AnnotationBase + "/java-keystores-creation-timestamp"
+const storesCreationTimestamp = util.AnnotationBase + "/java-keystores-creation-timestamp"
+const javeKeyStroreAliasName = util.AnnotationBase + "/java-keystore-alias"
 const defaultpassword = "changeme"
 const keystoreName = "keystore.jks"
 const truststoreName = "truststore.jks"
@@ -324,7 +325,7 @@ func getPassword(secret *corev1.Secret) string {
 
 func (r *SecretToKeyStoreReconciler) getCreationTimestamp(secret *corev1.Secret) (time.Time, error) {
 
-	if timeStr, ok := secret.GetAnnotations()[storesCreationTiemstamp]; ok {
+	if timeStr, ok := secret.GetAnnotations()[storesCreationTimestamp]; ok {
 		creationTime, err := time.Parse(time.RFC3339, timeStr)
 		if err != nil {
 			r.Log.Error(err, "unable to parse creation time")
@@ -333,7 +334,7 @@ func (r *SecretToKeyStoreReconciler) getCreationTimestamp(secret *corev1.Secret)
 		return creationTime, nil
 	} else {
 		now := time.Now()
-		secret.GetAnnotations()[storesCreationTiemstamp] = now.Format(time.RFC3339)
+		secret.GetAnnotations()[storesCreationTimestamp] = now.Format(time.RFC3339)
 		return now, nil
 	}
 }
