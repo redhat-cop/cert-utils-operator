@@ -28,8 +28,9 @@ import (
 const javaKeyStoresAnnotation = util.AnnotationBase + "/generate-java-keystores"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
 const storesCreationTimestamp = util.AnnotationBase + "/java-keystores-creation-timestamp"
-const javeKeyStroreAliasName = util.AnnotationBase + "/java-keystore-alias"
+const javeKeyStoreAliasName = util.AnnotationBase + "/java-keystore-alias"
 const defaultpassword = "changeme"
+const defaultAlias = "alias"
 const keystoreName = "keystore.jks"
 const truststoreName = "truststore.jks"
 
@@ -259,7 +260,7 @@ func (r *SecretToKeyStoreReconciler) getKeyStoreFromSecret(secret *corev1.Secret
 	}
 	r.Log.Info("retrieved", "creation time", creationTime)
 
-	err = keyStore.SetPrivateKeyEntry("alias", keystore.PrivateKeyEntry{
+	err = keyStore.SetPrivateKeyEntry(getAlias(secret), keystore.PrivateKeyEntry{
 		CreationTime:     creationTime,
 		PrivateKey:       p.Bytes,
 		CertificateChain: certs,
@@ -293,7 +294,7 @@ func (r *SecretToKeyStoreReconciler) getTrustStoreFromSecret(secret *corev1.Secr
 	r.Log.Info("retrieved", "creation time", creationTime)
 	i := 0
 	for p, rest := pem.Decode(ca); p != nil; p, rest = pem.Decode(rest) {
-		err := keyStore.SetTrustedCertificateEntry("alias"+strconv.Itoa(i), keystore.TrustedCertificateEntry{
+		err := keyStore.SetTrustedCertificateEntry(getAlias(secret)+strconv.Itoa(i), keystore.TrustedCertificateEntry{
 			CreationTime: creationTime,
 			Certificate: keystore.Certificate{
 				Type:    "X.509",
@@ -321,6 +322,13 @@ func getPassword(secret *corev1.Secret) string {
 		return pwd
 	}
 	return defaultpassword
+}
+
+func getAlias(secret *corev1.Secret) string {
+	if alias, ok := secret.GetAnnotations()[javeKeyStoreAliasName]; ok && alias != "" {
+		return alias
+	}
+	return defaultAlias
 }
 
 func (r *SecretToKeyStoreReconciler) getCreationTimestamp(secret *corev1.Secret) (time.Time, error) {

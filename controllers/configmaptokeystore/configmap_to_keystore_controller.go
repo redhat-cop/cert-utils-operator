@@ -26,8 +26,10 @@ import (
 const javaTrustStoreAnnotation = util.AnnotationBase + "/generate-java-truststore"
 const javaTrustStoreSourceAnnotation = util.AnnotationBase + "/source-ca-key"
 const keystorepasswordAnnotation = util.AnnotationBase + "/java-keystore-password"
+const javeKeyStoreAliasName = util.AnnotationBase + "/java-keystore-alias"
 const defaultpassword = "changeme"
 const truststoreName = "truststore.jks"
+const defaultAlias = "alias"
 
 // ConfigMapToKeystoreReconciler reconciles a Namespace object
 type ConfigMapToKeystoreReconciler struct {
@@ -134,7 +136,7 @@ func (r *ConfigMapToKeystoreReconciler) getTrustStoreFromConfigMap(configMap *co
 	}
 	i := 0
 	for p, rest := pem.Decode([]byte(ca)); p != nil; p, rest = pem.Decode(rest) {
-		keyStore["alias"+strconv.Itoa(i)] = &keystore.TrustedCertificateEntry{
+		keyStore[getAlias(configMap)+strconv.Itoa(i)] = &keystore.TrustedCertificateEntry{
 			Entry: keystore.Entry{
 				CreationDate: time.Now(),
 			},
@@ -159,6 +161,13 @@ func getPassword(configMap *corev1.ConfigMap) string {
 		return pwd
 	}
 	return defaultpassword
+}
+
+func getAlias(configMap *corev1.ConfigMap) string {
+	if alias, ok := configMap.GetAnnotations()[javeKeyStoreAliasName]; ok && alias != "" {
+		return alias
+	}
+	return defaultAlias
 }
 
 func getSourceKey(annotations map[string]string) string {
