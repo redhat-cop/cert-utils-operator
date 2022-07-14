@@ -60,7 +60,13 @@ A such annotated secret looks like the following:
 
 ![keystore](media/keystore.png)
 
-The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
+The default password for these keystores is `changeme`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`, but can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-alias: <alias>`.
+
+| Annotation  | Default  | Description  |
+|:-|:-:|---|
+| `cert-utils-operator.redhat-cop.io/java-keystore-password` | changeit | The password to use when consuming the JKS trust store |
+| `cert-utils-operator.redhat-cop.io/generate-java-keystores` | false | Should the JKS keystore and truststore files be generated and attached to the secret |
+| `cert-utils-operator.redhat-cop.io/java-keystore-alias` | alias | The alias to use when consuming the JKS trust store |
 
 ### ConfigMaps
 
@@ -72,12 +78,13 @@ When this annotation is the following entry is added to the configmap as binaryD
 
 Note that Java Keystore require the key to be in [PKCS#8](https://en.wikipedia.org/wiki/PKCS_8) format. It is a responsibility of the certificate provisioner to make sure the key is in this format. No validation is currently performed by the cert-utils operator.
 
-The default password for these keystores is `changeit`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`.
+The default password for these keystores is `changeit`. The password can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-password: <password>`. The alias of the certificate inside the keystore is `alias`, but can be changed by adding the following optional annotation: `cert-utils-operator.redhat-cop.io/java-keystore-alias: <alias>`.
 
 | Annotation  | Default  | Description  |
 |:-|:-:|---|
 | `cert-utils-operator.redhat-cop.io/java-keystore-password` | changeit | The password to use when consuming the JKS trust store |
 | `cert-utils-operator.redhat-cop.io/generate-java-truststore` | false | Should the JKS file be generated and attached to the configmap |
+| `cert-utils-operator.redhat-cop.io/java-keystore-alias` | alias | The alias to use when consuming the JKS trust store |
 | `cert-utils-operator.redhat-cop.io/source-ca-key` | ca-bundle.crt | The key in the configmap which will be read to generate the truststore.jks |
 
 ## Showing info on the certificates
