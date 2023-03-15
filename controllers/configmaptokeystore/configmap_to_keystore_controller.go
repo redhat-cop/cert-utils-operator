@@ -7,10 +7,9 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/go-logr/logr"
-	keystore "github.com/pavel-v-chernykh/keystore-go"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/redhat-cop/cert-utils-operator/controllers/util"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -127,26 +126,31 @@ func (r *ConfigMapToKeystoreReconciler) Reconcile(context context.Context, req c
 }
 
 func (r *ConfigMapToKeystoreReconciler) getTrustStoreFromConfigMap(configMap *corev1.ConfigMap, sourceKey string) ([]byte, error) {
-	keyStore := keystore.KeyStore{}
+	keyStore := keystore.New(
+		keystore.WithOrderedAliases(),
+	)
 	ca, ok := configMap.Data[sourceKey]
 	if !ok {
 		return nil, errors.New("ca bundle key not found: " + sourceKey)
 	}
 	i := 0
+
 	for p, rest := pem.Decode([]byte(ca)); p != nil; p, rest = pem.Decode(rest) {
-		keyStore["alias"+strconv.Itoa(i)] = &keystore.TrustedCertificateEntry{
-			Entry: keystore.Entry{
-				CreationDate: time.Now(),
+		keyStore.SetTrustedCertificateEntry(
+			"alias"+strconv.Itoa(i),
+			keystore.TrustedCertificateEntry{
+				CreationTime: configMap.GetCreationTimestamp().Time,
+				Certificate: keystore.Certificate{
+					Type:    "X.509",
+					Content: p.Bytes,
+				},
 			},
-			Certificate: keystore.Certificate{
-				Type:    "X.509",
-				Content: p.Bytes,
-			},
-		}
+		)
 		i++
 	}
+
 	buffer := bytes.Buffer{}
-	err := keystore.Encode(&buffer, keyStore, []byte(getPassword(configMap)))
+	err := keyStore.Store(&buffer, []byte(getPassword(configMap)))
 	if err != nil {
 		r.Log.Error(err, "unable to encode keystore", "keystore", keyStore)
 		return nil, err
