@@ -77,4 +77,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat Community of Practice
-  version: 0.0.0
+  version: 0.1.0
