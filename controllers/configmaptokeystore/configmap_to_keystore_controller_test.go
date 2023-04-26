@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/pem"
+	"io/ioutil"
 	"testing"
 
-	"github.com/pavel-v-chernykh/keystore-go"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -112,16 +113,21 @@ pPVWQxaZLPSkVrQ0uGE3ycJYgBugl6H8WY3pEfbRD0tVNEYqi4Y7
 	cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, outConfigMap)
 
 	// validate truststore.jks was set with a valid keystore
-	keyStore, err := keystore.Decode(bytes.NewBuffer(outConfigMap.BinaryData["truststore.jks"]), []byte("changeme"))
+	ks := keystore.New()
+	err = ks.Load(
+		bytes.NewBuffer(outConfigMap.BinaryData["truststore.jks"]),
+		[]byte("changeme"),
+	)
 	assert.Nil(t, err, "error reading generated truststore")
 
 	// make sure expected cert was set
-	assert.Equal(t, 1, len(keyStore))
+	assert.Equal(t, 1, len(ks.Aliases()))
 
 	// make sure cert data match
+	tce, err := ks.GetTrustedCertificateEntry("alias0")
 	decodePem := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
-		Bytes: keyStore["alias0"].(*keystore.TrustedCertificateEntry).Certificate.Content,
+		Bytes: tce.Certificate.Content,
 	})
 	if err != nil {
 		t.Error(err)
@@ -223,20 +229,92 @@ pPVWQxaZLPSkVrQ0uGE3ycJYgBugl6H8WY3pEfbRD0tVNEYqi4Y7
 	cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, outConfigMap)
 
 	// validate truststore.jks was set with a valid keystore
-	keyStore, err := keystore.Decode(bytes.NewBuffer(outConfigMap.BinaryData["truststore.jks"]), []byte("changeme"))
+	ks := keystore.New()
+	err = ks.Load(bytes.NewBuffer(outConfigMap.BinaryData["truststore.jks"]), []byte("changeme"))
 	assert.Nil(t, err, "error reading generated truststore")
 
 	// make sure expected cert was set
-	assert.Equal(t, 1, len(keyStore))
+	assert.Equal(t, 1, len(ks.Aliases()))
 
 	// make sure cert data match
+	tce, err := ks.GetTrustedCertificateEntry("alias0")
 	decodePem := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
-		Bytes: keyStore["alias0"].(*keystore.TrustedCertificateEntry).Certificate.Content,
+		Bytes: tce.Certificate.Content,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	assert.Equal(t, []byte(configMap.Data["my-custom-key"]), decodePem)
+}
+
+func TestConfigmapControllerCreateFromConfigMapBinaryEquals(t *testing.T) {
+	var (
+		name      = "cert-utils-operator"
+		namespace = "cert-utils-operator"
+	)
+
+	caBundle, err := ioutil.ReadFile("testdata/ca-bundle.crt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A configmap injection annotation
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"cert-utils-operator.redhat-cop.io/generate-java-truststore": "true",
+			},
+		},
+		Data: map[string]string{
+			"ca-bundle.crt": string(caBundle),
+		},
+	}
+
+	objs := []runtime.Object{configMap}
+
+	cl := fake.NewFakeClient(objs...)
+
+	fakeRecorder := record.NewFakeRecorder(3)
+
+	reconcileBase := util.NewReconcilerBase(cl, scheme.Scheme, nil, fakeRecorder, nil)
+	r := &ConfigMapToKeystoreReconciler{
+		ReconcilerBase: reconcileBase,
+		Log:            ctrl.Log.WithName("controllers").WithName("configmap_to_keystore_controller"),
+	}
+
+	// First reconcile
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	_, err = r.Reconcile(context.TODO(), req)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+
+	outConfigMap := &corev1.ConfigMap{}
+	cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, outConfigMap)
+
+	// Reconcile a second time
+	req = reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	_, err = r.Reconcile(context.TODO(), req)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+
+	outConfigMap2 := &corev1.ConfigMap{}
+	cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, outConfigMap2)
+
+	assert.Equal(t, outConfigMap.BinaryData["truststore.jks"], outConfigMap2.BinaryData["truststore.jks"])
 }
