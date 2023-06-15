@@ -15,9 +15,9 @@ spec:
         - alert: CertificateApproachingExpiration
           annotations:
             message: >-
-              Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 85% of its lifetime
+              Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is at 85% of its lifetime
             summary: >-
-              Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 85% of its lifetime
+              Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is at 85% of its lifetime
           expr: |
             cert:time_to_expiration:sec/cert:validity_duration:sec < 0.15
           labels:
@@ -25,9 +25,9 @@ spec:
         - alert: CertificateIsAboutToExpire
           annotations:
             message: >-
-              Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 95% of its lifetime
+              Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is at 95% of its lifetime
             summary: >-
-              Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 95% of its lifetime
+              Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is at 95% of its lifetime
           expr: >
             cert:time_to_expiration:sec/cert:validity_duration:sec < 0.05
           labels:
