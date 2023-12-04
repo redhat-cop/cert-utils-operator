@@ -300,7 +300,7 @@ func (r *SecretToKeyStoreReconciler) getTrustStoreFromSecret(secret *corev1.Secr
 			},
 		})
 		if err != nil {
-			r.Log.Error(err, "unable to set trusted certifciate entry")
+			r.Log.Error(err, "unable to set trusted certificate entry")
 			return []byte{}, err
 		}
 		// increment counter

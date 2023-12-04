@@ -95,11 +95,11 @@ A such annotated secret looks like the following:
 
 ## Alerting when a certificate is about to expire
 
-This operator can generate Prometheus alerts and/or Kubernetes events when a certifciate is about to expire.
+This operator can generate Prometheus alerts and/or Kubernetes events when a certificate is about to expire.
 
 ### Generating prometheus alerts
 
-Prometheus alerts are generated for all certificates. In order for the certifciate metrics to be collected and the alerts be generated the Prometheus CRs deployed with this operator must be honored by a [Prometheus operator](https://github.com/prometheus-operator/prometheus-operator). If you are running on OpenShift just add the label ``openshift.io/cluster-monitoring="true"`` to the namespace containing the operator.
+Prometheus alerts are generated for all certificates. In order for the certificate metrics to be collected and the alerts be generated the Prometheus CRs deployed with this operator must be honored by a [Prometheus operator](https://github.com/prometheus-operator/prometheus-operator). If you are running on OpenShift just add the label ``openshift.io/cluster-monitoring="true"`` to the namespace containing the operator.
 
 The following metrics will be collected for every tls secret:
 
@@ -110,8 +110,8 @@ The following metrics will be collected for every tls secret:
 | `cert:validity_duration:sec` | duration of the certificate validity in seconds |
 | `cert:time_to_expiration:sec` | time left to expiration in seconds |
 
-Alerts will be generated at 85% and 95% of the certifciate lifetime.
-Alerts are generated for all certificates including certifciate that are possibly automatically rotated. This is intentional as the automation that rotates the certificates may be non-functioning.
+Alerts will be generated at 85% and 95% of the certificate lifetime.
+Alerts are generated for all certificates including certificate that are possibly automatically rotated. This is intentional as the automation that rotates the certificates may be non-functioning.
 
 If these alerts are not useful in your deployment, you can be silenced them in alert-manager as described [here](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule).
 
