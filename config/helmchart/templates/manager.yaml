@@ -55,7 +55,11 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
+        {{- if .Values.enableCertManager }}
         - name: webhook-server-cert
+        {{- else }}
+        - name: cert-utils-operator-certs
+        {{- end }}
           readOnly: true
           mountPath: /tmp/k8s-webhook-server/serving-certs
         {{- with .Values.env }}
@@ -93,8 +97,10 @@ spec:
       - name: cert-utils-operator-certs
         secret:
           defaultMode: 420
-          secretName: cert-utils-operator-certs 
+          secretName: cert-utils-operator-certs
+      {{- if .Values.enableCertManager }}
       - name: webhook-server-cert
         secret:
           secretName: webhook-server-cert
-          defaultMode: 420              
+          defaultMode: 420
+      {{- end }}
