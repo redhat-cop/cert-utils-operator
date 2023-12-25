@@ -3,12 +3,12 @@ module github.com/redhat-cop/cert-utils-operator
 go 1.16
 
 require (
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.4.1
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible
 	github.com/pavel-v-chernykh/keystore-go/v4 v4.2.0
-	github.com/pavlo-v-chernykh/keystore-go/v4 v4.4.1 // indirect
+	github.com/pavlo-v-chernykh/keystore-go/v4 v4.4.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/redhat-cop/operator-utils v1.1.4
 	github.com/scylladb/go-set v1.0.2
