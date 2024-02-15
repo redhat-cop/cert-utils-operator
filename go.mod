@@ -19,5 +19,5 @@ require (
 	k8s.io/client-go v0.20.2
 	k8s.io/kube-aggregator v0.20.1
 	k8s.io/kubectl v0.20.2
-	sigs.k8s.io/controller-runtime v0.8.3
+	sigs.k8s.io/controller-runtime v0.17.2
 )
