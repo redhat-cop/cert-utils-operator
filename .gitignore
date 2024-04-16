@@ -23,6 +23,7 @@ testbin/*
 *.swp
 *.swo
 *~
+.vscode
 
 bundle/
 bundle.Dockerfile

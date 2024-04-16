@@ -15,7 +15,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // MutatingWebhookConfigurationReconciler reconciles a Namespace object
@@ -28,18 +27,14 @@ type MutatingWebhookConfigurationReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *MutatingWebhookConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "mutating_webhook_ca_injection_controller"
-
+	ctx := context.TODO()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&admissionregistrationv1.MutatingWebhookConfiguration{
 			TypeMeta: v1.TypeMeta{
 				Kind: "MutatingWebhookConfiguration",
 			},
 		}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "MutatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(ctx, r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "MutatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

@@ -14,7 +14,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // SecretReconciler reconciles a Namespace object
@@ -27,18 +26,14 @@ type SecretReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "secret_ca_injection_controller"
-
+	ctx := context.TODO()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.ConfigMap{
 			TypeMeta: v1.TypeMeta{
 				Kind: "Secret",
 			},
 		}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(ctx, r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

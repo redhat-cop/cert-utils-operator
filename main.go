@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -27,6 +28,10 @@ import (
 	"github.com/redhat-cop/cert-utils-operator/controllers/route"
 	"github.com/redhat-cop/cert-utils-operator/controllers/secrettokeystore"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
+	doutils "github.com/redhat-cop/operator-utils/pkg/util/discoveryclient"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -35,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -60,6 +64,7 @@ func init() {
 }
 
 func main() {
+	ctx := context.TODO()
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -75,11 +80,13 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	metrics := metricsserver.Options{
+		BindAddress: metricsAddr,
+	}
+	cfg := rest.Config{}
+	mgr, err := manager.New(&cfg, manager.Options{
 		Scheme:                     scheme,
-		MetricsBindAddress:         metricsAddr,
-		Port:                       9443,
+		Metrics:                    metrics,
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             enableLeaderElection,
 		LeaderElectionID:           "b7831733.redhat.io",
@@ -170,11 +177,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if res, err := outils.IsGVKDefined(schema.GroupVersionKind{
+	if res, err := doutils.IsGVKDefined(ctx, schema.GroupVersionKind{
 		Group:   "route.openshift.io",
 		Version: "v1",
 		Kind:    "Route",
-	}, discovery.NewDiscoveryClientForConfigOrDie(mgr.GetConfig())); err == nil && res != nil {
+	}); err == nil && res {
 		if err = (&route.RouteCertificateReconciler{
 			ReconcilerBase: outils.NewFromManager(mgr, mgr.GetEventRecorderFor("route_certificate_controller")),
 			Log:            ctrl.Log.WithName("controllers").WithName("route_certificate_controller"),

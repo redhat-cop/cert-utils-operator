@@ -105,7 +105,7 @@ func (e *enqueueRequestForReferecingObject) matchSecretWithResource(secret types
 	return result, nil
 }
 
-func NewEnqueueRequestForReferecingObject(config *rest.Config, gvk schema.GroupVersionKind) *enqueueRequestForReferecingObject {
+func NewEnqueueRequestForReferecingObject(ctx context.Context, config *rest.Config, gvk schema.GroupVersionKind) *enqueueRequestForReferecingObject {
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 	client := dynamic.NewForConfigOrDie(config).Resource(gvr)
 	return &enqueueRequestForReferecingObject{
@@ -118,7 +118,7 @@ type enqueueRequestForReferecingObject struct {
 }
 
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingObject) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingObject) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	namespacedName := types.NamespacedName{
 		Name:      evt.Object.GetName(),
 		Namespace: evt.Object.GetNamespace(),
@@ -139,7 +139,7 @@ func (e *enqueueRequestForReferecingObject) Create(evt event.CreateEvent, q work
 
 // Update implements EventHandler
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingObject) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingObject) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	namespacedName := types.NamespacedName{
 		Name:      evt.ObjectNew.GetName(),
 		Namespace: evt.ObjectNew.GetNamespace(),
@@ -159,12 +159,12 @@ func (e *enqueueRequestForReferecingObject) Update(evt event.UpdateEvent, q work
 }
 
 // Delete implements EventHandler
-func (e *enqueueRequestForReferecingObject) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingObject) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 
 // Generic implements EventHandler
-func (e *enqueueRequestForReferecingObject) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingObject) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 
