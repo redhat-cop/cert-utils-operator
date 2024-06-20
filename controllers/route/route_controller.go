@@ -291,7 +291,7 @@ func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q wo
 func populateRouteWithCertifcates(route *routev1.Route, secret *corev1.Secret) bool {
 	shouldUpdate := false
 	if route.Spec.TLS.Termination == "edge" || route.Spec.TLS.Termination == "reencrypt" {
-		// here we need to replace the terminating certifciate
+		// here we need to replace the terminating certificate
 		if value, ok := secret.Data[util.Key]; ok && len(value) != 0 {
 			if route.Spec.TLS.Key != string(value) {
 				route.Spec.TLS.Key = string(value)
