@@ -19,7 +19,7 @@ spec:
             summary: >-
               Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 85% of its lifetime
           expr: |
-            cert:time_to_expiration:sec/cert:validity_duration:sec < 0.15
+            (cert:time_to_expiration:sec/cert:validity_duration:sec < 0.15) and (cert:time_to_expiration:sec > 0)
           labels:
             severity: warning
         - alert: CertificateIsAboutToExpire
@@ -29,6 +29,6 @@ spec:
             summary: >-
               Certificate {{ $labels.namespace }}/{{ $labels.name }} is at 95% of its lifetime
           expr: >
-            cert:time_to_expiration:sec/cert:validity_duration:sec < 0.05
+            (cert:time_to_expiration:sec/cert:validity_duration:sec < 0.05) and (cert:time_to_expiration:sec > 0)
           labels:
             severity: critical
