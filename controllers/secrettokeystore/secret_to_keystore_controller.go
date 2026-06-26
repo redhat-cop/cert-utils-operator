@@ -17,7 +17,6 @@ import (
 	"github.com/scylladb/go-set/strset"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -85,11 +84,7 @@ func (r *SecretToKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}, builder.WithPredicates(isAnnotatedSecret)).
+		For(&corev1.Secret{}, builder.WithPredicates(isAnnotatedSecret)).
 		Complete(r)
 }
 

@@ -71,7 +71,7 @@ func TestSecretToKeyStore_Creation(t *testing.T) {
 			Name:      "test-tls-secret",
 			Namespace: "default",
 			Annotations: map[string]string{
-				"cert-utils-operator.redhat-cop.io/generate-java-keystore": "true",
+				"cert-utils-operator.redhat-cop.io/generate-java-keystores": "true",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
@@ -138,7 +138,7 @@ func TestSecretToKeyStore_AnnotationRemoval(t *testing.T) {
 			Name:      "test-keystore-removal",
 			Namespace: "default",
 			Annotations: map[string]string{
-				"cert-utils-operator.redhat-cop.io/generate-java-keystore": "true",
+				"cert-utils-operator.redhat-cop.io/generate-java-keystores": "true",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
@@ -176,7 +176,7 @@ func TestSecretToKeyStore_AnnotationRemoval(t *testing.T) {
 		t.Fatalf("Failed to get secret: %v", err)
 	}
 
-	delete(updatedSecret.Annotations, "cert-utils-operator.redhat-cop.io/generate-java-keystore")
+	delete(updatedSecret.Annotations, "cert-utils-operator.redhat-cop.io/generate-java-keystores")
 	if err := k8sClient.Update(ctx, updatedSecret); err != nil {
 		t.Fatalf("Failed to update secret: %v", err)
 	}
