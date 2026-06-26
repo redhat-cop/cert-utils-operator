@@ -1,0 +1,3 @@
+# False positives for standard Kubernetes secret type references
+# SecretTypeTLS is a Go constant (corev1.SecretTypeTLS), not a secret value
+2c3f036df9fe976ea33e54c0b19f3c9faeff74f4:BUSINESS_LOGIC_ANALYSIS.md:*SecretTypeTLS*
