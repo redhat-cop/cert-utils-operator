@@ -22,7 +22,9 @@ func TestCAInjection_ConfigMap(t *testing.T) {
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			util.CA: []byte("test-ca-bundle-content"),
+			util.Cert: []byte("fake-cert"),  // Required for TLS secret
+			util.Key:  []byte("fake-key"),   // Required for TLS secret
+			util.CA:   []byte("test-ca-bundle-content"),
 		},
 	}
 	if err := k8sClient.Create(ctx, sourceSecret); err != nil {

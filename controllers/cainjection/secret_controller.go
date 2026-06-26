@@ -9,12 +9,10 @@ import (
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // SecretReconciler reconciles a Namespace object
@@ -29,16 +27,8 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "secret_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.ConfigMap{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged)).
+		For(&corev1.Secret{}).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
 		Complete(r)
 }
 

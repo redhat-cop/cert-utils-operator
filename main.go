@@ -33,9 +33,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -170,18 +168,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if res, err := outils.IsGVKDefined(schema.GroupVersionKind{
-		Group:   "route.openshift.io",
-		Version: "v1",
-		Kind:    "Route",
-	}, discovery.NewDiscoveryClientForConfigOrDie(mgr.GetConfig())); err == nil && res != nil {
-		if err = (&route.RouteCertificateReconciler{
-			ReconcilerBase: outils.NewFromManager(mgr, mgr.GetEventRecorderFor("route_certificate_controller")),
-			Log:            ctrl.Log.WithName("controllers").WithName("route_certificate_controller"),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "route_certificate_controller")
-			os.Exit(1)
-		}
+	// TODO: operator-utils v1.3.8 removed IsGVKDefined - need to find replacement or use different approach
+	// For now, always try to setup the route controller (will fail gracefully if routes CRD not available)
+	if err = (&route.RouteCertificateReconciler{
+		ReconcilerBase: outils.NewFromManager(mgr, mgr.GetEventRecorderFor("route_certificate_controller")),
+		Log:            ctrl.Log.WithName("controllers").WithName("route_certificate_controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Info("unable to create controller (might be expected if not on OpenShift)", "controller", "route_certificate_controller", "error", err)
 	}
 
 	// +kubebuilder:scaffold:builder

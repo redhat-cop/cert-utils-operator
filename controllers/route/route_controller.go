@@ -10,7 +10,6 @@ import (
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const certAnnotation = util.AnnotationBase + "/certs-from-secret"
@@ -121,16 +119,8 @@ func (r *RouteCertificateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&routev1.Route{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Route",
-			},
-		}, builder.WithPredicates(isAnnotatedAndSecureRoute)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, &enqueueRequestForReferecingRoutes{
+		For(&routev1.Route{}, builder.WithPredicates(isAnnotatedAndSecureRoute)).
+		Watches(&corev1.Secret{}, &enqueueRequestForReferecingRoutes{
 			Client: mgr.GetClient(),
 			log:    ctrl.Log.WithName("enqueueRequestForReferecingRoutes"),
 		}, builder.WithPredicates(isContentChanged)).
@@ -250,7 +240,7 @@ type enqueueRequestForReferecingRoutes struct {
 }
 
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingRoutes) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	routes, _ := e.matchSecret(e.Client, types.NamespacedName{
 		Name:      evt.Object.GetName(),
 		Namespace: evt.Object.GetNamespace(),
@@ -265,7 +255,7 @@ func (e *enqueueRequestForReferecingRoutes) Create(evt event.CreateEvent, q work
 
 // Update implements EventHandler
 // trigger a router reconcile event for those routes that reference this secret
-func (e *enqueueRequestForReferecingRoutes) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	routes, _ := e.matchSecret(e.Client, types.NamespacedName{
 		Name:      evt.ObjectNew.GetName(),
 		Namespace: evt.ObjectNew.GetNamespace(),
@@ -279,12 +269,12 @@ func (e *enqueueRequestForReferecingRoutes) Update(evt event.UpdateEvent, q work
 }
 
 // Delete implements EventHandler
-func (e *enqueueRequestForReferecingRoutes) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 
 // Generic implements EventHandler
-func (e *enqueueRequestForReferecingRoutes) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestForReferecingRoutes) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	return
 }
 

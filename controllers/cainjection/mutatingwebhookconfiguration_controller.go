@@ -10,12 +10,10 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // MutatingWebhookConfigurationReconciler reconciles a Namespace object
@@ -30,16 +28,8 @@ func (r *MutatingWebhookConfigurationReconciler) SetupWithManager(mgr ctrl.Manag
 	r.controllerName = "mutating_webhook_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&admissionregistrationv1.MutatingWebhookConfiguration{
-			TypeMeta: v1.TypeMeta{
-				Kind: "MutatingWebhookConfiguration",
-			},
-		}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "MutatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged)).
+		For(&admissionregistrationv1.MutatingWebhookConfiguration{}).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "MutatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
 		Complete(r)
 }
 

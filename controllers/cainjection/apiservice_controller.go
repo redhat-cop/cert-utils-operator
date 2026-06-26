@@ -9,13 +9,11 @@ import (
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // APIServiceReconciler reconciles a Namespace object
@@ -30,16 +28,8 @@ func (r *APIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "apiservice_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apiregistrationv1.APIService{
-			TypeMeta: v1.TypeMeta{
-				Kind: "APIService",
-			},
-		}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
-		Watches(&source.Kind{Type: &corev1.Secret{
-			TypeMeta: v1.TypeMeta{
-				Kind: "Secret",
-			},
-		}}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiregistration.k8s.io/v1", "APIService")), builder.WithPredicates(util.IsCAContentChanged)).
+		For(&apiregistrationv1.APIService{}).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiregistration.k8s.io/v1", "APIService")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
 		Complete(r)
 }
 
