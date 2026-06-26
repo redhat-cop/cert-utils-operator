@@ -28,8 +28,8 @@ func (r *ConfigmapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "configmap_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.ConfigMap{}).
-		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "ConfigMap")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
+		For(&corev1.ConfigMap{}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "ConfigMap")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

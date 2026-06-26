@@ -28,8 +28,8 @@ func (r *APIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "apiservice_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apiregistrationv1.APIService{}).
-		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiregistration.k8s.io/v1", "APIService")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
+		For(&apiregistrationv1.APIService{}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiregistration.k8s.io/v1", "APIService")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

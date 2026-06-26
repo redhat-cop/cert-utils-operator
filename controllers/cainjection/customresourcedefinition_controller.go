@@ -28,8 +28,8 @@ func (r *CRDReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "crd_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&crd.CustomResourceDefinition{}).
-		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiextensions.k8s.io/v1", "CustomResourceDefinition")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
+		For(&crd.CustomResourceDefinition{}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("apiextensions.k8s.io/v1", "CustomResourceDefinition")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

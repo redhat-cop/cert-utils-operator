@@ -28,8 +28,8 @@ func (r *ValidatingWebhookConfigurationReconciler) SetupWithManager(mgr ctrl.Man
 	r.controllerName = "validating_webhook_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&admissionregistrationv1.ValidatingWebhookConfiguration{}).
-		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
+		For(&admissionregistrationv1.ValidatingWebhookConfiguration{}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

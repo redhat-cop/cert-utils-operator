@@ -27,8 +27,8 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.controllerName = "secret_ca_injection_controller"
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{}).
-		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged, util.IsAnnotatedForSecretCAInjection)).
+		For(&corev1.Secret{}, builder.WithPredicates(util.IsAnnotatedForSecretCAInjection)).
+		Watches(&corev1.Secret{}, util.NewEnqueueRequestForReferecingObject(r.GetRestConfig(), schema.FromAPIVersionAndKind("v1", "Secret")), builder.WithPredicates(util.IsCAContentChanged)).
 		Complete(r)
 }
 

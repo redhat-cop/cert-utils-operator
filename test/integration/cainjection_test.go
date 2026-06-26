@@ -92,7 +92,9 @@ func TestCAInjection_Secret(t *testing.T) {
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			util.CA: []byte("test-ca-bundle-secret"),
+			util.Cert: []byte("fake-cert"),
+			util.Key:  []byte("fake-key"),
+			util.CA:   []byte("test-ca-bundle-secret"),
 		},
 	}
 	if err := k8sClient.Create(ctx, sourceSecret); err != nil {
@@ -161,7 +163,9 @@ func TestCAInjection_AnnotationRemoval(t *testing.T) {
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			util.CA: []byte("test-ca-bundle-removal"),
+			util.Cert: []byte("fake-cert"),
+			util.Key:  []byte("fake-key"),
+			util.CA:   []byte("test-ca-bundle-removal"),
 		},
 	}
 	if err := k8sClient.Create(ctx, sourceSecret); err != nil {
@@ -249,7 +253,9 @@ func TestCAInjection_SourceSecretUpdate(t *testing.T) {
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			util.CA: []byte("original-ca-bundle"),
+			util.Cert: []byte("fake-cert"),
+			util.Key:  []byte("fake-key"),
+			util.CA:   []byte("original-ca-bundle"),
 		},
 	}
 	if err := k8sClient.Create(ctx, sourceSecret); err != nil {
