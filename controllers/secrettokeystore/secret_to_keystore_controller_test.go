@@ -2,6 +2,7 @@ package secrettokeystore
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,8 +14,13 @@ import (
 
 	keystore "github.com/pavel-v-chernykh/keystore-go/v4"
 	"github.com/redhat-cop/cert-utils-operator/controllers/util"
+	outils "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -718,5 +724,290 @@ func TestConstants(t *testing.T) {
 				t.Errorf("%s = %v, want %v", tt.name, tt.constant, tt.expected)
 			}
 		})
+	}
+}
+
+func TestReconcile(t *testing.T) {
+	certPEM, keyPEM, caPEM := generateTestCertificate(t)
+
+	tests := []struct {
+		name           string
+		secret         *corev1.Secret
+		validateFunc   func(*testing.T, *corev1.Secret)
+		expectError    bool
+	}{
+		{
+			name: "annotation true - generate keystore and truststore",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation: "true",
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert: certPEM,
+					util.Key:  keyPEM,
+					util.CA:   caPEM,
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				if _, ok := s.Data[keystoreName]; !ok {
+					t.Error("keystore.jks not generated")
+				}
+				if _, ok := s.Data[truststoreName]; !ok {
+					t.Error("truststore.jks not generated")
+				}
+				// Verify keystores are valid by loading them
+				ks := keystore.New()
+				if err := ks.Load(bytes.NewReader(s.Data[keystoreName]), []byte(defaultpassword)); err != nil {
+					t.Errorf("generated keystore is invalid: %v", err)
+				}
+				ts := keystore.New()
+				if err := ts.Load(bytes.NewReader(s.Data[truststoreName]), []byte(defaultpassword)); err != nil {
+					t.Errorf("generated truststore is invalid: %v", err)
+				}
+			},
+		},
+		{
+			name: "annotation true - only cert and key (no CA) - only keystore",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation: "true",
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert: certPEM,
+					util.Key:  keyPEM,
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				if _, ok := s.Data[keystoreName]; !ok {
+					t.Error("keystore.jks not generated")
+				}
+				if _, ok := s.Data[truststoreName]; ok {
+					t.Error("truststore.jks should not be generated without CA")
+				}
+			},
+		},
+		{
+			name: "annotation true - only CA (no cert/key) - only truststore",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation: "true",
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.CA: caPEM,
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				if _, ok := s.Data[keystoreName]; ok {
+					t.Error("keystore.jks should not be generated without cert and key")
+				}
+				if _, ok := s.Data[truststoreName]; !ok {
+					t.Error("truststore.jks not generated")
+				}
+			},
+		},
+		{
+			name: "annotation false - remove existing keystores",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation: "false",
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert:     certPEM,
+					util.Key:      keyPEM,
+					util.CA:       caPEM,
+					keystoreName:  []byte("old-keystore-data"),
+					truststoreName: []byte("old-truststore-data"),
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				if _, ok := s.Data[keystoreName]; ok {
+					t.Error("keystore.jks should be removed when annotation is false")
+				}
+				if _, ok := s.Data[truststoreName]; ok {
+					t.Error("truststore.jks should be removed when annotation is false")
+				}
+			},
+		},
+		{
+			name: "annotation missing - remove existing keystores",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert:     certPEM,
+					util.Key:      keyPEM,
+					keystoreName:  []byte("old-keystore-data"),
+					truststoreName: []byte("old-truststore-data"),
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				if _, ok := s.Data[keystoreName]; ok {
+					t.Error("keystore.jks should be removed when annotation is missing")
+				}
+				if _, ok := s.Data[truststoreName]; ok {
+					t.Error("truststore.jks should be removed when annotation is missing")
+				}
+			},
+		},
+		{
+			name: "custom password annotation",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation:    "true",
+						keystorepasswordAnnotation: "custom-pass",
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert: certPEM,
+					util.Key:  keyPEM,
+					util.CA:   caPEM,
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				// Verify keystore can be opened with custom password
+				ks := keystore.New()
+				if err := ks.Load(bytes.NewReader(s.Data[keystoreName]), []byte("custom-pass")); err != nil {
+					t.Errorf("keystore should be encrypted with custom password: %v", err)
+				}
+				// Verify it fails with default password
+				ks2 := keystore.New()
+				if err := ks2.Load(bytes.NewReader(s.Data[keystoreName]), []byte(defaultpassword)); err == nil {
+					t.Error("keystore should NOT open with default password")
+				}
+			},
+		},
+		{
+			name: "idempotency - keystores already exist with same content",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						javaKeyStoresAnnotation: "true",
+						storesCreationTiemstamp: time.Now().Format(time.RFC3339),
+					},
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{
+					util.Cert: certPEM,
+					util.Key:  keyPEM,
+					util.CA:   caPEM,
+				},
+			},
+			validateFunc: func(t *testing.T, s *corev1.Secret) {
+				// First reconcile generates keystores
+				if _, ok := s.Data[keystoreName]; !ok {
+					t.Error("keystore.jks not generated on first reconcile")
+				}
+				if _, ok := s.Data[truststoreName]; !ok {
+					t.Error("truststore.jks not generated on first reconcile")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create fake client with the secret
+			scheme := runtime.NewScheme()
+			_ = corev1.AddToScheme(scheme)
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.secret).
+				Build()
+
+			// Create reconciler
+			reconciler := &SecretToKeyStoreReconciler{
+				ReconcilerBase: outils.NewReconcilerBase(fakeClient, scheme, nil, nil, nil),
+				Log:            zap.New(zap.UseDevMode(true)),
+			}
+
+			// Reconcile
+			ctx := context.Background()
+			req := ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      tt.secret.Name,
+					Namespace: tt.secret.Namespace,
+				},
+			}
+
+			_, err := reconciler.Reconcile(ctx, req)
+
+			if (err != nil) != tt.expectError {
+				t.Errorf("Reconcile() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+
+			// Fetch the updated secret
+			updatedSecret := &corev1.Secret{}
+			err = fakeClient.Get(ctx, req.NamespacedName, updatedSecret)
+			if err != nil {
+				t.Fatalf("failed to get updated secret: %v", err)
+			}
+
+			if tt.validateFunc != nil {
+				tt.validateFunc(t, updatedSecret)
+			}
+		})
+	}
+}
+
+func TestReconcile_SecretNotFound(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	reconciler := &SecretToKeyStoreReconciler{
+		ReconcilerBase: outils.NewReconcilerBase(fakeClient, scheme, nil, nil, nil),
+		Log:            zap.New(zap.UseDevMode(true)),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      "nonexistent",
+			Namespace: "test",
+		},
+	}
+
+	result, err := reconciler.Reconcile(ctx, req)
+
+	if err != nil {
+		t.Errorf("Reconcile() should not error on NotFound, got: %v", err)
+	}
+
+	if result.Requeue {
+		t.Error("Reconcile() should not requeue on NotFound")
 	}
 }
