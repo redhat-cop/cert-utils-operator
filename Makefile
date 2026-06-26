@@ -116,8 +116,8 @@ test: manifests fmt vet ## Run unit tests.
 	go test $(shell go list ./... | grep -v /test/integration) -coverprofile cover.out
 
 .PHONY: integration
-integration: manifests fmt vet envtest ## Run integration tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./test/integration/... -v -timeout 10m
+integration: kind-setup manifests fmt vet ## Run integration tests in kind cluster.
+	go test ./test/integration/... -v -timeout 10m
 
 .PHONY: kind-setup
 kind-setup: kind kubectl helm

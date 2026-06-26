@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-cop/cert-utils-operator/controllers/cainjection"
 	"github.com/redhat-cop/cert-utils-operator/controllers/certexpiryalert"
 	"github.com/redhat-cop/cert-utils-operator/controllers/certificateinfo"
 	"github.com/redhat-cop/cert-utils-operator/controllers/secrettokeystore"
 	outils "github.com/redhat-cop/operator-utils/pkg/util"
-	routev1 "github.com/openshift/api/route/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	crd "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -37,15 +37,18 @@ func TestMain(m *testing.M) {
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	// Setup envtest environment
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: false,
-	}
-
-	cfg, err := testEnv.Start()
+	// Use kind cluster if available, otherwise fall back to envtest
+	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		panic(err)
+		// Fallback to envtest for local development
+		testEnv = &envtest.Environment{
+			CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+			ErrorIfCRDPathMissing: false,
+		}
+		cfg, err = testEnv.Start()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// Setup scheme
@@ -131,8 +134,10 @@ func TestMain(m *testing.M) {
 
 	// Teardown
 	cancel()
-	if err := testEnv.Stop(); err != nil {
-		panic(err)
+	if testEnv != nil {
+		if err := testEnv.Stop(); err != nil {
+			panic(err)
+		}
 	}
 
 	os.Exit(code)
