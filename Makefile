@@ -321,7 +321,10 @@ helmchart-test: kind-setup helmchart
 	  (echo "ERROR: Pod failed to become ready. Showing diagnostics:" && \
 	   $(KUBECTL) get pods -n ${OPERATOR_NAME}-local && \
 	   $(KUBECTL) describe pod -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} && \
-	   $(KUBECTL) logs -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} --tail=50 || true && \
+	   echo "=== Logs from cert-utils-operator container ===" && \
+	   $(KUBECTL) logs -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} -c ${OPERATOR_NAME} --tail=100 || true && \
+	   echo "=== Logs from kube-rbac-proxy container ===" && \
+	   $(KUBECTL) logs -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} -c kube-rbac-proxy --tail=50 || true && \
 	   exit 1)
 	$(KUBECTL) wait --namespace default --for=condition=ready pod prometheus-kube-prometheus-stack-prometheus-0 --timeout=${KUBECTL_WAIT_TIMEOUT}
 	$(KUBECTL) exec prometheus-kube-prometheus-stack-prometheus-0 -n default -c test-metrics -- /bin/sh -c "echo 'Example metrics...' && cat /tmp/ready"
