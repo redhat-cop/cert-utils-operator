@@ -77,7 +77,8 @@ func TestMain(m *testing.M) {
 
 	// Setup controller manager
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme,
+		Scheme:             scheme,
+		MetricsBindAddress: "0", // Disable metrics server to avoid port conflicts
 	})
 	if err != nil {
 		panic(err)
