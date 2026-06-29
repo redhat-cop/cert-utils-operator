@@ -316,7 +316,13 @@ helmchart-test: kind-setup helmchart
 	  --set enableCertManager=true \
 	  --set image.repository=${HELM_TEST_IMG_NAME} \
 	  --set image.tag=${HELM_TEST_IMG_TAG}
-	$(KUBECTL) wait --namespace ${OPERATOR_NAME}-local --for=condition=ready pod --selector=app.kubernetes.io/name=${OPERATOR_NAME} --timeout=${KUBECTL_WAIT_TIMEOUT}
+	@echo "Waiting for operator pod to be ready..."
+	$(KUBECTL) wait --namespace ${OPERATOR_NAME}-local --for=condition=ready pod --selector=app.kubernetes.io/name=${OPERATOR_NAME} --timeout=${KUBECTL_WAIT_TIMEOUT} || \
+	  (echo "ERROR: Pod failed to become ready. Showing diagnostics:" && \
+	   $(KUBECTL) get pods -n ${OPERATOR_NAME}-local && \
+	   $(KUBECTL) describe pod -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} && \
+	   $(KUBECTL) logs -n ${OPERATOR_NAME}-local -l app.kubernetes.io/name=${OPERATOR_NAME} --tail=50 || true && \
+	   exit 1)
 	$(KUBECTL) wait --namespace default --for=condition=ready pod prometheus-kube-prometheus-stack-prometheus-0 --timeout=${KUBECTL_WAIT_TIMEOUT}
 	$(KUBECTL) exec prometheus-kube-prometheus-stack-prometheus-0 -n default -c test-metrics -- /bin/sh -c "echo 'Example metrics...' && cat /tmp/ready"
 
