@@ -3,7 +3,7 @@ HELM_REPO_DEST ?= /tmp/gh-pages
 OPERATOR_NAME ?=$(shell basename -z `pwd`)
 HELM_VERSION ?= v3.11.0
 KIND_VERSION ?= v0.17.0
-KUBECTL_VERSION ?= v1.21.1
+KUBECTL_VERSION ?= v1.28.0
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
