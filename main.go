@@ -81,7 +81,7 @@ func main() {
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             enableLeaderElection,
 		LeaderElectionID:           "b7831733.redhat.io",
-		LeaderElectionResourceLock: "configmaps",
+		LeaderElectionResourceLock: "leases",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
