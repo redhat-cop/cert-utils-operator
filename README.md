@@ -1,5 +1,8 @@
 # Cert-utils-operator
 
+> **⚠️ PROJECT RETIRED**  
+> This project is no longer in active development and has been retired. Most features are now available natively in the [cert-manager](https://cert-manager.io/) ecosystem. For migration guidance, see [CERT_MANAGER_MIGRATION_PLAN.md](./CERT_MANAGER_MIGRATION_PLAN.md).
+
 ![build status](https://github.com/redhat-cop/cert-utils-operator/workflows/push/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/redhat-cop/cert-utils-operator)](https://goreportcard.com/report/github.com/redhat-cop/cert-utils-operator)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/redhat-cop/cert-utils-operator)
