@@ -187,7 +187,9 @@ func (r *RouteCertificateReconciler) Reconcile(context context.Context, req ctrl
 			log.Error(err, "unable to find referenced secret", "secret", secretName)
 			return r.ManageError(context, instance, err)
 		}
-		shouldUpdate = shouldUpdate || populateRouteWithCertifcates(instance, secret)
+		if populateRouteWithCertifcates(instance, secret) {
+			shouldUpdate = true
+		}
 	}
 	if !okca {
 		if instance.Spec.TLS.DestinationCACertificate != "" {
@@ -201,10 +203,12 @@ func (r *RouteCertificateReconciler) Reconcile(context context.Context, req ctrl
 			Name:      caSecretName,
 		}, secret)
 		if err != nil {
-			log.Error(err, "unable to find referenced ca secret", "secret", secretName)
+			log.Error(err, "unable to find referenced ca secret", "secret", caSecretName)
 			return r.ManageError(context, instance, err)
 		}
-		shouldUpdate = shouldUpdate || populateRouteDestCA(instance, secret)
+		if populateRouteDestCA(instance, secret) {
+			shouldUpdate = true
+		}
 	}
 
 	if shouldUpdate {
