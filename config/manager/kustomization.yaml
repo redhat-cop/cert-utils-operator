@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/redhat-cop/cert-utils-operator
-  newTag: latest
+  newTag: latest@sha256:0290e7b2800a5aa8eb57b0268908f2a20a93b16403c76df4c61021048161d6ff
